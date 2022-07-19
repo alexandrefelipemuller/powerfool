@@ -14,3 +14,9 @@ You can make your own hardware using diagrams and source code on this site.
 Support
 ---------------
 Please contact autor and use Wiki here no Github
+
+Diagram
+---------------
+![](https://github.com/alexandrefelipemuller/powerfool/blob/main/diagrams/Schematic_Modulo%20AutoDuino_2022-07-18.png?raw=true)
+
+

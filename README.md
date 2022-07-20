@@ -13,6 +13,7 @@ Features
 * Oil and fuel pressure sensor and warnings
 * Renault Computer Board with distance per consume and autonomy (may work on other manufacturers)
 * Shift light, shift stage, low battery warning, etc...
+* Air temperature and oxygen sensor adjustment for tuning
 
 Where to buy
 ---------------

@@ -26,8 +26,8 @@ void Menu() {
  
     for (;;) {
         switch (Serial.read()) {
-            case '1': subMenu_num(0); break;
-            case '2': subMenu_num(1); break;
+            case '1': subMenu_num(1); break;
+            case '2': subMenu_num(0); break;
             case '3': Serial.println("nao implementado"); break;
             case '4': diagnostic_mode=1; break;
             case '5': Serial.end(); return;
@@ -39,7 +39,7 @@ void Menu() {
 void subMenu_num(int position){
   Serial.println("");
   Serial.print("*** Valor em memoria: ");
-  int value = EEPROM.read(position);
+  signed char value = EEPROM.read(position);
   Serial.println(value);
   Serial.println("Valor entre -100 (%) e +100 (%), sendo 0 sem correcao");
   Serial.println("+ Aumentar 1");
@@ -73,6 +73,7 @@ void subMenu_num(int position){
             case 's': 
                 Serial.println("Salvando valor...");
                 EEPROM.write(position, value);
+                correction_drift[position] = value;
                 return;
             default: break;  // includes the case 'no input'
         }
@@ -113,7 +114,3 @@ void clearScreen(){
     Serial.write(27);
     Serial.print("[H");
 }
-
-
-
-

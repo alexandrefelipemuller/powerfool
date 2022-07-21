@@ -1,4 +1,3 @@
-#include <LiquidCrystal.h>
 #include <EEPROM.h>
 #include "menu.h"
 #define timer_freq 3000
@@ -12,30 +11,17 @@
 const float injetor = 23; // vazao do injetor a 12v, em lbs/h
 
 // set up pulse pins
-const int n_saidas_pulso = 2;
+#define n_saidas_pulso 2
 int out_freq[n_saidas_pulso] = {1,1};
 unsigned long previousTime[n_saidas_pulso] = {0,0};
 //Define pinos para pulsar, devem ser iniciador em setup
 int pulse_pin[n_saidas_pulso] = {-1,-1}; 
-int correction_drift[n_saidas_pulso] = {-1,-1}; 
+signed char correction_drift[n_saidas_pulso] = {0,0}; 
 
 int diagnostic_mode = 0;
 
-//LCD pin to Arduino
-const int pin_RS = 8; 
-const int pin_EN = 9; 
-const int pin_d4 = 4; 
-const int pin_d5 = 5; 
-const int pin_d6 = 6; 
-const int pin_d7 = 7; 
-
-const int pin_BL = 10; 
-
-LiquidCrystal lcd( pin_RS,  pin_EN,  pin_d4,  pin_d5,  pin_d6,  pin_d7);
-
 unsigned long ontime, offtime, period;
-float drift;
-float freq,duty;
+float drift,freq,duty;
    
 void setup()
 {
@@ -46,14 +32,6 @@ void setup()
   pinMode(speed_in_pin,INPUT);
   pinMode(voltageIn, INPUT);
   
-  lcd.begin(16, 2);
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("Freq:");
-  lcd.setCursor(0,1);
-  lcd.print("Outf:");  
-  
-
   pulse_pin[0]=consume_pin;
   pulse_pin[1]=speed_out_pin;
   int drift0 = EEPROM.read(0);
@@ -81,8 +59,8 @@ void loop()
 {
   if (Serial.available() > 0 || diagnostic_mode)
     Menu();
-  ontime = pulseIn(injector_pin,HIGH,250000);
-  offtime = pulseIn(injector_pin,LOW,250000); 
+  ontime = pulseInLong(injector_pin,HIGH,250000);
+  offtime = pulseInLong(injector_pin,LOW,250000); 
   period = ontime+offtime;
   freq = 1000000.0/period;
   duty = (float)offtime/(float)(period); 
@@ -96,31 +74,24 @@ void loop()
   // 0.083 Renault empirical constant
   setOutFrequency(consumo/0.083f,0); 
   
-  ontime = pulseIn(speed_in_pin,HIGH,200000);
-  offtime = pulseIn(speed_in_pin,LOW,200000); 
+  ontime = pulseInLong(speed_in_pin,HIGH,200000);
+  offtime = pulseInLong(speed_in_pin,LOW,200000); 
   period = ontime+offtime;
   if (period == 0.0)
     setOutFrequency(0.0,1);  
   else
     setOutFrequency(1000000.0f/period,1);
-     
-  lcd.setCursor(6,0); 
-  lcd.print((int) freq);
-  lcd.print("Hz, ");
-  lcd.setCursor(12,0);
-  lcd.print((int) (duty*100)); 
-  lcd.print("%"); 
-
-  lcd.setCursor(6,1); 
-  lcd.print((int) out_freq[0]);
-  lcd.print("  ");
-  
+   
   if (diagnostic_mode){
     clearScreen();
     Serial.print("Entrada velocidade: ");
-    Serial.println(1000000.0/period);
+    Serial.println(1000000.0f/period);
     Serial.print("Saida velocidade: ");
     Serial.println(out_freq[1]);
+    
+    Serial.print("Drift de velocidade: ");
+    Serial.println((float)(correction_drift[1]+100)/100.0);
+    
     Serial.print("Velocidade: ");
     Serial.print(out_freq[1]/1.35f); //Parametrize it later
     Serial.println(" km/h");
@@ -136,7 +107,6 @@ void loop()
     Serial.print("Consumo Instantaneo: ");
     Serial.print((out_freq[1]/4.86f)/consumo);
     Serial.println(" km/l");
-    
     Serial.print("Tensao bateria: ");
     Serial.print(volts);
     Serial.println(" v");
@@ -145,16 +115,16 @@ void loop()
 }
 
 void setOutFrequency(float baseFreq, int num){
-  if (baseFreq > 320)
+  if (baseFreq > 320.0)
     baseFreq=320.0f;
-  if (baseFreq < 2){
+  if (baseFreq < 2.0){
     //desabilita aquela saida
     digitalWrite(pulse_pin[num],LOW);
     previousTime[num] = micros(); 
-    baseFreq=1;
+    baseFreq=1.0;
   }
-  float drift=(correction_drift[num]+100)/100;
-  out_freq[num]=baseFreq*drift;
+  float drift=(float)(correction_drift[num]+100)/100.0;
+  out_freq[num]=(baseFreq*drift);
 }
 
 float normalizeVoltage(float input){
@@ -173,8 +143,7 @@ ISR(TIMER1_OVF_vect)
  unsigned long currentTime = micros();
  for (int i=0;i < n_saidas_pulso; i++)
     if ((currentTime - previousTime[i]) >= (unsigned long)1000000.0f/out_freq[i]<<1) {  //cada pulso um high e um low, por isso mult por 2
-        digitalWrite(pulse_pin[i],!digitalRead(pulse_pin[i]));
+      digitalWrite(pulse_pin[i],!digitalRead(pulse_pin[i]));
     	previousTime[i] = currentTime;
-  }
+    }
 }
-

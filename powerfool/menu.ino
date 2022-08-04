@@ -1,5 +1,5 @@
 #include <EEPROM.h>
-
+#include <avr/pgmspace.h>
 /* 
 * Memory is just 200 bytes, so we have to safe it
 * instead of storing objects, we have to store just the essential
@@ -11,17 +11,17 @@
 void Menu() {
   if (diagnostic_mode)
     return;
-  Serial.println("|****************************|");
-  Serial.println("|**|       Setup Menu     |**|");
-  Serial.println("|****************************|");
+  Serial.println(F("|****************************|"));
+  Serial.println(F("|**| Powerfool Setup Menu |**|"));
+  Serial.println(F("|****************************|"));
   Serial.println("");
-  Serial.println("Select one of the following options:");
-  Serial.println("1 Ajuste Velocidade");
-  Serial.println("2 Ajuste Computador de bordo");
-  Serial.println("3 Funcoes especiais");
-  Serial.println("4 Modo diagnostico");
-  Serial.println("5 Sair do menu");
-  Serial.print("* Version:");
+  Serial.println(F("Select one of the following options:"));
+  Serial.println(F("1 Ajuste Velocidade"));
+  Serial.println(F("2 Ajuste Computador de bordo"));
+  Serial.println(F("3 Funcoes especiais"));
+  Serial.println(F("4 Modo diagnostico"));
+  Serial.println(F("5 Sair do menu"));
+  Serial.print(F("* Version:"));
   Serial.println(SW_VERSION,DEC);
  
     for (;;) {
@@ -29,7 +29,7 @@ void Menu() {
             case '1': subMenu_num(1); break;
             case '2': subMenu_num(0); break;
             case '3': Serial.println("nao implementado"); break;
-            case '4': diagnostic_mode=1; break;
+            case '4': diagnostic_mode=true; break;
             case '5': Serial.end(); return;
             default: continue;  // includes the case 'no input'
         }
@@ -38,36 +38,41 @@ void Menu() {
 }
 void subMenu_num(int position){
   Serial.println("");
-  Serial.print("*** Valor em memoria: ");
+  Serial.print(F("*** Valor em memoria: "));
   signed char value = EEPROM.read(position);
-  Serial.println(value);
-  Serial.println("Valor entre -100 (%) e +100 (%), sendo 0 sem correcao");
-  Serial.println("+ Aumentar 1");
-  Serial.println("- Diminuir 1");
-  Serial.println("a Aumentar 10");
-  Serial.println("d Diminuir 10");
-  Serial.println("s Sair do menu");
+  Serial.print(memValueToCorrection(value));
+  Serial.println("%");
+  Serial.println(F("Valor entre -99 (%) e +400 (%), sendo 0 sem correcao"));
+  Serial.println(F("+ Aumentar 1"));
+  Serial.println(F("- Diminuir 1"));
+  Serial.println(F("a Aumentar 10"));
+  Serial.println(F("d Diminuir 10"));
+  Serial.println(F("s Sair do menu"));
     for (;;) {
         switch (Serial.read()) {
             case '+':
-  		value+=1;
-  		numberEntry(value);
-  		break;
+              if (value > 126)
+                value = 126;
+          		value+=1;
+              numberEntry(value,position);
+  		        break;
             case '-':
-                if (value <= -99)
-                   value = -98;
+                if (value <= -126)
+                   value = -125;
                 value-=1;
-             	numberEntry(value);
+              numberEntry(value,position);
           		break;
             case 'a': 
+                if (value > 117)
+                  value = 116;
                 value+=10;
-          		numberEntry(value);
+          	    numberEntry(value,position);
        			break;
             case 'd': 
-                if (value <= -89)
-                   value = -89;
+                if (value <= -117)
+                   value = -116;
                 value-=10;
-          		numberEntry(value);
+          		numberEntry(value,position);
        			break;
           break;
             case 's': 
@@ -80,10 +85,18 @@ void subMenu_num(int position){
     }
 }
 
-void numberEntry(int value){
-  Serial.print("Novo valor: ");
-  Serial.print(value);
-  Serial.println(", opcoes +, -, x, d ou s para sair e salvar ");
+void numberEntry(int value, int position){
+  Serial.print(F("Novo valor: ")); 
+  Serial.print(memValueToCorrection(value));
+  correction_drift[position] = value;
+  Serial.println(F("% de correcao, opcoes +, -, a, d ou s para sair e salvar"));
+}
+
+float memValueToCorrection(int value){
+  if (value > 0)  
+    return float (value*3.9f);
+  else
+    return float (value/1.27f);
 }
 
 void subMenu_e(){

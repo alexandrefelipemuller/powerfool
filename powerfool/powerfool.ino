@@ -3,10 +3,10 @@
 #define timer_freq 3000
 
 #define injector_pin 12 // roxo
-#define consume_pin 11 // branco
+#define consume_pin 11 // branco,cinza
 #define speed_in_pin 2 // verde
-#define speed_out_pin 3 // vermelho
-#define voltageIn A1 // interno
+#define speed_out_pin 3 // vermelho,laranja
+#define voltageIn A1 // interno para tensao do automovel
 
 const float injetor = 23; // vazao do injetor a 12v, em lbs/h
 
@@ -18,11 +18,11 @@ unsigned long previousTime[n_saidas_pulso] = {0,0};
 int pulse_pin[n_saidas_pulso] = {-1,-1}; 
 signed char correction_drift[n_saidas_pulso] = {0,0}; 
 
-int diagnostic_mode = 0;
+bool diagnostic_mode = false;
 
 unsigned long ontime, offtime, period;
 float drift,freq,duty;
-   
+
 void setup()
 {
   Serial.begin(9600);
@@ -90,8 +90,11 @@ void loop()
     Serial.println(out_freq[1]);
     
     Serial.print("Drift de velocidade: ");
-    Serial.println((float)(correction_drift[1]+100)/100.0);
-    
+    if (correction_drift[1] > 0)
+      Serial.println((float)(correction_drift[1]*0.039)+1.0);
+    else
+      Serial.println((float)(correction_drift[1]+127)/127);
+      
     Serial.print("Velocidade: ");
     Serial.print(out_freq[1]/1.35f); //Parametrize it later
     Serial.println(" km/h");
@@ -111,7 +114,7 @@ void loop()
     Serial.print(volts);
     Serial.println(" v");
   }
-  delay(100);
+  delay(70);
 }
 
 void setOutFrequency(float baseFreq, int num){
@@ -123,7 +126,11 @@ void setOutFrequency(float baseFreq, int num){
     previousTime[num] = micros(); 
     baseFreq=1.0;
   }
-  float drift=(float)(correction_drift[num]+100)/100.0;
+  float drift=0;
+  if (correction_drift[num] > 0)
+    drift=(float) (correction_drift[num]*0.039)+1.0;
+  else
+    drift=(float) (correction_drift[num]+127)/127;
   out_freq[num]=(baseFreq*drift);
 }
 
@@ -137,6 +144,9 @@ float normalizeVoltage(float input){
       return input;
 }
 
+
+/* This timer runs 3k times a second and verify if need to change state of any pulse output
+ */
 ISR(TIMER1_OVF_vect)
 {
  TCNT1 = 65536-(16000000/1024/timer_freq); // timer reset

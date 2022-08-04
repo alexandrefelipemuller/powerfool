@@ -25,6 +25,6 @@ Please contact autor and use Wiki here no Github
 
 Diagram
 ---------------
-![](https://github.com/alexandrefelipemuller/powerfool/blob/main/diagrams/Schematic_Modulo%20AutoDuino_2022-07-18.png?raw=true)
+![](https://github.com/alexandrefelipemuller/powerfool/blob/main/diagrams/Schematic_Modulo%20AutoDuino_2022-08-04.png?raw=true)
 
 

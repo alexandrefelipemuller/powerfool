@@ -8,11 +8,11 @@
 #define speed_out_pin 3 // vermelho,laranja
 #define voltageIn A1 // interno para tensao do automovel
 
-const float injetor = 23; // vazao do injetor a 12v, em lbs/h
+const float injetor = 23*4; // vazao do injetor a 12v, em lbs/h
 
 // set up pulse pins
 #define n_saidas_pulso 2
-int out_freq[n_saidas_pulso] = {1,1};
+float out_freq[n_saidas_pulso] = {1,1};
 unsigned long previousTime[n_saidas_pulso] = {0,0};
 //Define pinos para pulsar, devem ser iniciador em setup
 int pulse_pin[n_saidas_pulso] = {-1,-1}; 
@@ -20,8 +20,9 @@ signed char correction_drift[n_saidas_pulso] = {0,0};
 
 bool diagnostic_mode = false;
 
-unsigned long ontime, offtime, period;
-float drift,freq,duty;
+unsigned long ontime, offtime, period, last_millis;
+unsigned long totalKM; //tripA, tripB,
+float drift,freq,duty, odometer = 0;
 
 void setup()
 {
@@ -89,12 +90,9 @@ void loop()
     Serial.print("Saida velocidade: ");
     Serial.println(out_freq[1]);
     
-    Serial.print("Drift de velocidade: ");
-    if (correction_drift[1] > 0)
-      Serial.println((float)(correction_drift[1]*0.039)+1.0);
-    else
-      Serial.println((float)(correction_drift[1]+127)/127);
-      
+    Serial.print("Distancia percorrida: ");
+    Serial.println(totalKM);
+  
     Serial.print("Velocidade: ");
     Serial.print(out_freq[1]/1.35f); //Parametrize it later
     Serial.println(" km/h");
@@ -114,6 +112,15 @@ void loop()
     Serial.print(volts);
     Serial.println(" v");
   }
+  unsigned long elapsedtime = millis() - last_millis;
+  odometer += (elapsedtime*out_freq[1])/4860.0f; //meters
+  if (odometer > 500.0){
+    //tripA += odometer;
+    //tripB += odometer;
+    totalKM += odometer;
+    odometer = 0.0;
+  }
+  last_millis = millis();
   delay(70);
 }
 
@@ -122,9 +129,9 @@ void setOutFrequency(float baseFreq, int num){
     baseFreq=320.0f;
   if (baseFreq < 2.0){
     //desabilita aquela saida
-    digitalWrite(pulse_pin[num],LOW);
+    digitalWrite(pulse_pin[num],HIGH);
     previousTime[num] = micros(); 
-    baseFreq=1.0;
+    baseFreq=0.0;
   }
   float drift=0;
   if (correction_drift[num] > 0)
@@ -151,9 +158,13 @@ ISR(TIMER1_OVF_vect)
 {
  TCNT1 = 65536-(16000000/1024/timer_freq); // timer reset
  unsigned long currentTime = micros();
- for (int i=0;i < n_saidas_pulso; i++)
-    if ((currentTime - previousTime[i]) >= (unsigned long)1000000.0f/out_freq[i]<<1) {  //cada pulso um high e um low, por isso mult por 2
+ for (int i=0;i < n_saidas_pulso; i++){
+    if (out_freq[i] == 0.0)
+      digitalWrite(pulse_pin[i],HIGH);
+    else if ((currentTime - previousTime[i]) >= (unsigned long)1000000.0f/(out_freq[i]*2)) {  //cada pulso um high e um low, por isso mult por 2
       digitalWrite(pulse_pin[i],!digitalRead(pulse_pin[i]));
-    	previousTime[i] = currentTime;
-    }
+      previousTime[i] = currentTime;
+    }  
+ }
+
 }

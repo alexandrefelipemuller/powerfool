@@ -6,6 +6,7 @@
 * <memory position = value, meaning>
 * 0 = correction drift 0, consume
 * 1 = correction drift 1, speed
+* 2 = Total odometer (4 bytes)
 */
 
 void Menu() {

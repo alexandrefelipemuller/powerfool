@@ -20,9 +20,18 @@ signed char correction_drift[n_saidas_pulso] = {0,0};
 
 bool diagnostic_mode = false;
 
-unsigned long ontime, offtime, period, last_millis;
-unsigned long totalKM; //tripA, tripB,
-float drift,freq,duty, odometer = 0;
+unsigned long last_millis;
+unsigned long totalMileage, tripA;
+
+struct inputFreq{
+  unsigned long ontime;
+  unsigned long offtime;
+  unsigned long period;
+  float freq;
+};
+typedef struct inputFreq inputFreq;
+
+float drift, duty, odometer = 0;
 
 void setup()
 {
@@ -40,10 +49,12 @@ void setup()
     //First boot, clear memory
     EEPROM.write(0,0);
     EEPROM.write(1,0);
+    EEPROM.put(2,(long)0);
     drift0=0;
   } 
   correction_drift[0] = drift0;
   correction_drift[1] = EEPROM.read(1);
+  EEPROM.get(2,totalMileage);
   
   // Configuração do timer1 
   TCCR1A = 0;                        //confira timer para operação normal pinos OC1A e OC1B desconectados
@@ -60,70 +71,81 @@ void loop()
 {
   if (Serial.available() > 0 || diagnostic_mode)
     Menu();
-  ontime = pulseInLong(injector_pin,HIGH,250000);
-  offtime = pulseInLong(injector_pin,LOW,250000); 
-  period = ontime+offtime;
-  freq = 1000000.0/period;
-  duty = (float)offtime/(float)(period); 
-  
+
   float volts = analogRead(voltageIn)*0.0197f;
   
+  inputFreq injectorInput, speedInput;
+  readFrequency(injector_pin, &injectorInput);
+  duty = (float)injectorInput.offtime/(float)(injectorInput.period); 
   float vazao = injetor * (0.126);// * (normalizeVoltage(volts)/12); // correction by voltage, result in ml/s 
-  
-  float consumo = freq*vazao*duty;
+  float consumption = injectorInput.freq*vazao*duty;
    
   // 0.083 Renault empirical constant
-  setOutFrequency(consumo/0.083f,0); 
+  if (injectorInput.period == 0.0)
+    setOutFrequency(0.0,0);  
+  else
+    setOutFrequency(consumption/0.083f,0); 
   
-  ontime = pulseInLong(speed_in_pin,HIGH,200000);
-  offtime = pulseInLong(speed_in_pin,LOW,200000); 
-  period = ontime+offtime;
-  if (period == 0.0)
+  readFrequency(speed_in_pin, &speedInput);
+  if (speedInput.period == 0.0)
     setOutFrequency(0.0,1);  
   else
-    setOutFrequency(1000000.0f/period,1);
+    setOutFrequency(speedInput.freq,1);
    
   if (diagnostic_mode){
     clearScreen();
     Serial.print("Entrada velocidade: ");
-    Serial.println(1000000.0f/period);
+    Serial.println(speedInput.freq);
     Serial.print("Saida velocidade: ");
     Serial.println(out_freq[1]);
     
-    Serial.print("Distancia percorrida: ");
-    Serial.println(totalKM);
-  
+    Serial.print("Distancia total (km): ");
+    Serial.println(totalMileage/1000);
+    Serial.print("Odometro trip A (m): ");
+    Serial.println(tripA);
+ 
     Serial.print("Velocidade: ");
     Serial.print(out_freq[1]/1.35f); //Parametrize it later
     Serial.println(" km/h");
     Serial.print("Entrada injetores: ");
-    Serial.print(freq);
+    Serial.print(injectorInput.freq);
     Serial.print("Hz, (%)");
     Serial.println(duty);
     Serial.print("Saida consumo: ");
     Serial.println(out_freq[0]);
     Serial.print("Consumo: ");
-    Serial.print(consumo);
+    Serial.print(consumption);
     Serial.println(" ml/s");
     Serial.print("Consumo Instantaneo: ");
-    Serial.print((out_freq[1]/4.86f)/consumo);
+    Serial.print((out_freq[1]/4.86f)/consumption);
     Serial.println(" km/l");
     Serial.print("Tensao bateria: ");
     Serial.print(volts);
     Serial.println(" v");
   }
+
+  //Calculate distance
   unsigned long elapsedtime = millis() - last_millis;
   odometer += (elapsedtime*out_freq[1])/4860.0f; //meters
   if (odometer > 500.0){
-    //tripA += odometer;
-    //tripB += odometer;
-    totalKM += odometer;
+    tripA += odometer;
+    totalMileage += odometer;
     odometer = 0.0;
+    EEPROM.put(2, totalMileage);
   }
   last_millis = millis();
+  
   delay(70);
 }
 
+void readFrequency(int pin, inputFreq *returnedValues){
+  (*returnedValues).ontime = pulseInLong(pin,HIGH,200000);
+  (*returnedValues).offtime = pulseInLong(pin,LOW,200000); 
+  (*returnedValues).period = (*returnedValues).ontime+(*returnedValues).offtime;
+  (*returnedValues).freq = 1000000.0/(*returnedValues).period;
+}
+
+//Setup the frequency to output
 void setOutFrequency(float baseFreq, int num){
   if (baseFreq > 320.0)
     baseFreq=320.0f;
@@ -164,7 +186,7 @@ ISR(TIMER1_OVF_vect)
     else if ((currentTime - previousTime[i]) >= (unsigned long)1000000.0f/(out_freq[i]*2)) {  //cada pulso um high e um low, por isso mult por 2
       digitalWrite(pulse_pin[i],!digitalRead(pulse_pin[i]));
       previousTime[i] = currentTime;
-    }  
+    }
  }
 
 }

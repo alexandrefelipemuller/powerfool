@@ -8,7 +8,7 @@
 #define speed_out_pin 3 // vermelho,laranja
 #define voltageIn A1 // interno para tensao do automovel
 
-const float injetor = 23*4; // vazao do injetor a 12v, em lbs/h
+const float injetor = 23; // vazao do injetor a 12v, em lbs/h
 
 // set up pulse pins
 #define n_saidas_pulso 2
@@ -44,32 +44,25 @@ void setup()
   
   pulse_pin[0]=consume_pin;
   pulse_pin[1]=speed_out_pin;
-  int drift0 = EEPROM.read(0);
-  if (drift0 == 255){
+  
+  if (EEPROM.read(0) == 255){
     //First boot, clear memory
-    EEPROM.write(0,0);
-    EEPROM.write(1,0);
-    EEPROM.put(2,(long)0);
-    drift0=0;
-  } 
-  correction_drift[0] = drift0;
-  correction_drift[1] = EEPROM.read(1);
-  EEPROM.get(2,totalMileage);
-  
-  // Configuração do timer1 
-  TCCR1A = 0;                        //confira timer para operação normal pinos OC1A e OC1B desconectados
-  TCCR1B = 0;                        //limpa registrador
-  TCCR1B |= (1<<CS10)|(1 << CS12);   // configura prescaler para 1024: CS12 = 1 e CS10 = 1
+    EEPROM.put(0,(int)0);
+    EEPROM.put(2,(int)0);
+    EEPROM.put(4,(long)0);
  
-  TCNT1 = 65536-(16000000/1024/timer_freq); //configura timer
+  } 
+  //Load values
+  EEPROM.get(0,correction_drift[0]);
+  EEPROM.get(2,correction_drift[1]);
+  EEPROM.get(4,totalMileage);
   
-  TIMSK1 |= (1 << TOIE1);           // habilita a interrupção do TIMER1
-
+  setupTimer1();
 }
 
 void loop()
 {
-  if (Serial.available() > 0 || diagnostic_mode)
+  if (Serial.available() > 0)
     Menu();
 
   float volts = analogRead(voltageIn)*0.0197f;
@@ -94,34 +87,8 @@ void loop()
    
   if (diagnostic_mode){
     clearScreen();
-    Serial.print("Entrada velocidade: ");
-    Serial.println(speedInput.freq);
-    Serial.print("Saida velocidade: ");
-    Serial.println(out_freq[1]);
-    
-    Serial.print("Distancia total (km): ");
-    Serial.println(totalMileage/1000);
-    Serial.print("Odometro trip A (m): ");
-    Serial.println(tripA);
- 
-    Serial.print("Velocidade: ");
-    Serial.print(out_freq[1]/1.35f); //Parametrize it later
-    Serial.println(" km/h");
-    Serial.print("Entrada injetores: ");
-    Serial.print(injectorInput.freq);
-    Serial.print("Hz, (%)");
-    Serial.println(duty);
-    Serial.print("Saida consumo: ");
-    Serial.println(out_freq[0]);
-    Serial.print("Consumo: ");
-    Serial.print(consumption);
-    Serial.println(" ml/s");
-    Serial.print("Consumo Instantaneo: ");
-    Serial.print((out_freq[1]/4.86f)/consumption);
-    Serial.println(" km/l");
-    Serial.print("Tensao bateria: ");
-    Serial.print(volts);
-    Serial.println(" v");
+    diagnosticReport(injectorInput, speedInput, consumption, volts);
+    delay(150);
   }
 
   //Calculate distance
@@ -134,21 +101,29 @@ void loop()
     EEPROM.put(2, totalMileage);
   }
   last_millis = millis();
-  
-  delay(70);
+
+  delay(50);
+}
+
+void setupTimer1(){
+  TCCR1A = 0;                        //confira timer para operação normal pinos OC1A e OC1B desconectados
+  TCCR1B = 0;                        //limpa registrador
+  TCCR1B |= (1<<CS10)|(1 << CS12);   // configura prescaler para 1024: CS12 = 1 e CS10 = 1
+  TCNT1 = 65536-(16000000/1024/timer_freq); //configura timer
+  TIMSK1 |= (1 << TOIE1);           // habilita a interrupção do TIMER1
 }
 
 void readFrequency(int pin, inputFreq *returnedValues){
   (*returnedValues).ontime = pulseInLong(pin,HIGH,200000);
   (*returnedValues).offtime = pulseInLong(pin,LOW,200000); 
-  (*returnedValues).period = (*returnedValues).ontime+(*returnedValues).offtime;
-  (*returnedValues).freq = 1000000.0/(*returnedValues).period;
+  (*returnedValues).period = ((*returnedValues).ontime+(*returnedValues).offtime);
+  (*returnedValues).freq = (1000000.0f/(*returnedValues).period);
 }
 
 //Setup the frequency to output
 void setOutFrequency(float baseFreq, int num){
-  if (baseFreq > 320.0)
-    baseFreq=320.0f;
+  if (baseFreq > 400.0)
+    baseFreq=400.0f;
   if (baseFreq < 2.0){
     //desabilita aquela saida
     digitalWrite(pulse_pin[num],HIGH);
@@ -156,10 +131,11 @@ void setOutFrequency(float baseFreq, int num){
     baseFreq=0.0;
   }
   float drift=0;
+  
   if (correction_drift[num] > 0)
-    drift=(float) (correction_drift[num]*0.039)+1.0;
+    drift=(float) (correction_drift[num]/81.9175)+1.0;
   else
-    drift=(float) (correction_drift[num]+127)/127;
+    drift=(float) (correction_drift[num]+32767)/32767;
   out_freq[num]=(baseFreq*drift);
 }
 
@@ -181,12 +157,9 @@ ISR(TIMER1_OVF_vect)
  TCNT1 = 65536-(16000000/1024/timer_freq); // timer reset
  unsigned long currentTime = micros();
  for (int i=0;i < n_saidas_pulso; i++){
-    if (out_freq[i] == 0.0)
-      digitalWrite(pulse_pin[i],HIGH);
-    else if ((currentTime - previousTime[i]) >= (unsigned long)1000000.0f/(out_freq[i]*2)) {  //cada pulso um high e um low, por isso mult por 2
-      digitalWrite(pulse_pin[i],!digitalRead(pulse_pin[i]));
+    if ((out_freq[i] > 2.0) && (currentTime - previousTime[i]) >= (unsigned long)(1000000.0f/(out_freq[i]*2))) { //each pulse is high and low, so freq is double
       previousTime[i] = currentTime;
+      digitalWrite(pulse_pin[i],!digitalRead(pulse_pin[i]));
     }
  }
-
 }

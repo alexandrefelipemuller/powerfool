@@ -133,9 +133,9 @@ void setOutFrequency(float baseFreq, int num){
   float drift=0;
   
   if (correction_drift[num] > 0)
-    drift=(float) (correction_drift[num]/81.9175)+1.0;
+    drift=(float) (correction_drift[num]/81.9175)+1.0f;
   else
-    drift=(float) (correction_drift[num]+32767)/32767;
+    drift=(float) (correction_drift[num]+32767)/32767.0f;
   out_freq[num]=(baseFreq*drift);
 }
 

@@ -98,11 +98,11 @@ void loop()
     tripA += odometer;
     totalMileage += odometer;
     odometer = 0.0;
-    EEPROM.put(2, totalMileage);
+    EEPROM.put(4, totalMileage);
   }
   last_millis = millis();
 
-  delay(50);
+  delay(100);
 }
 
 void setupTimer1(){

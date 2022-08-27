@@ -41,10 +41,11 @@ void Menu() {
     }
 }
 void subMenu_num(int position){
-  Serial.println("");
-  Serial.print(F("*** Valor em memoria: "));
   int value;
   EEPROM.get(position,value);
+  Serial.println("");
+  Serial.println(value);
+  Serial.print(F("*** Valor em memoria: "));
   Serial.print(memValueToCorrection(value));
   Serial.println("%");
   Serial.println(F("Valor entre -99 (%) e +400 (%), sendo 0 sem correcao"));
@@ -87,6 +88,7 @@ void subMenu_num(int position){
           break;
             case 's': 
                 Serial.println("Salvando valor...");
+                Serial.println(value);
                 EEPROM.put(position, (int) value);
                 correction_drift[position] = value;
                 return;
@@ -125,7 +127,7 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print("Entrada injetores: ");
     Serial.print(injectorInput.freq);
     Serial.print("Hz, (%)");
-    Serial.println(duty);
+    Serial.println(duty);  
     Serial.print("Saida consumo: ");
     Serial.println(out_freq[0]);
     Serial.print("Consumo: ");
@@ -137,6 +139,8 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print("Tensao bateria: ");
     Serial.print(volts);
     Serial.println(" v");
+    if (Serial.read() == 27)
+      diagnostic_mode = false;
 }
 void subMenu_e(){
   /* Serial.println("|***|  Special features  |***|");

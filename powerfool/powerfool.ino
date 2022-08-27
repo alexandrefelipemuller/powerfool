@@ -16,7 +16,7 @@ float out_freq[n_saidas_pulso] = {1,1};
 unsigned long previousTime[n_saidas_pulso] = {0,0};
 //Define pinos para pulsar, devem ser iniciador em setup
 int pulse_pin[n_saidas_pulso] = {-1,-1}; 
-signed char correction_drift[n_saidas_pulso] = {0,0}; 
+int correction_drift[n_saidas_pulso] = {0,0}; 
 
 bool diagnostic_mode = false;
 
@@ -133,7 +133,7 @@ void setOutFrequency(float baseFreq, int num){
   float drift=0;
   
   if (correction_drift[num] > 0)
-    drift=(float) (correction_drift[num]/81.9175)+1.0f;
+    drift=(float) (correction_drift[num]/8191.75f)+1.0f;
   else
     drift=(float) (correction_drift[num]+32767)/32767.0f;
   out_freq[num]=(baseFreq*drift);

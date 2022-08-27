@@ -1,3 +1,3 @@
-#define SW_VERSION 005
+#define SW_VERSION 6
 void Menu();
 void clearScreen();

@@ -31,7 +31,7 @@ void Menu() {
         switch (Serial.read()) {
             case '1': subMenu_num(1); break;
             case '2': subMenu_num(0); break;
-            case '3': Serial.println("nao implementado"); break;
+            case '3': Serial.println(F("nao implementado")); break;
             case '4': diagnostic_mode=true; break;
             case '5': Serial.println(F("bye...")); Serial.end(); return;
             case '6': resetFunc();
@@ -89,7 +89,7 @@ void subMenu_num(int position){
             case 's': 
                 Serial.println("Salvando valor...");
                 Serial.println(value);
-                EEPROM.put(position, (int) value);
+                EEPROM.put(position*2, (int) value);
                 correction_drift[position] = value;
                 return;
             default: break;  // includes the case 'no input'
@@ -111,34 +111,35 @@ float memValueToCorrection(int value){
     return float (value/327.67f);
 }
 void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consumption, float volts){
-    Serial.print("Entrada velocidade: ");
+    Serial.print(F("Entrada velocidade: "));
     Serial.println(speedInput.freq);
-    Serial.print("Saida velocidade: ");
+    Serial.print(F("Saida velocidade: "));
     Serial.println(out_freq[1]);
     
-    Serial.print("Distancia total (km): ");
+    Serial.print(F("Distancia total (km): "));
     Serial.println(totalMileage/1000);
-    Serial.print("Odometro trip A (m): ");
+    Serial.print(F("Odometro trip A (m): "));
     Serial.println(tripA);
  
-    Serial.print("Velocidade: ");
+    Serial.print(F("Velocidade: "));
     Serial.print(out_freq[1]/1.35f); //Parametrize it later
-    Serial.println(" km/h");
-    Serial.print("Entrada injetores: ");
+    Serial.println(F(" km/h"));
+    Serial.print(F("Entrada injetores: "));
     Serial.print(injectorInput.freq);
-    Serial.print("Hz, (%)");
+    Serial.print(F("Hz, (%)"));
     Serial.println(duty);  
-    Serial.print("Saida consumo: ");
+    Serial.print(F("Saida consumo: "));
     Serial.println(out_freq[0]);
-    Serial.print("Consumo: ");
+    Serial.print(F("Consumo: "));
     Serial.print(consumption);
-    Serial.println(" ml/s");
-    Serial.print("Consumo Instantaneo: ");
+    Serial.println(F(" ml/s"));
+    Serial.print(F("Consumo Instantaneo: "));
     Serial.print((out_freq[1]/4.86f)/consumption);
-    Serial.println(" km/l");
-    Serial.print("Tensao bateria: ");
+    Serial.println(F(" km/l"));
+    Serial.print(F("Tensao bateria: "));
     Serial.print(volts);
-    Serial.println(" v");
+    Serial.println(F(" v"));
+    Serial.println(F("Pressione ESC para sair"));
     if (Serial.read() == 27)
       diagnostic_mode = false;
 }

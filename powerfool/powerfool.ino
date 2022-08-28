@@ -130,8 +130,8 @@ void setOutFrequency(float baseFreq, int num){
     previousTime[num] = micros(); 
     baseFreq=0.0;
   }
-  float drift=0;
   
+  float drift=0;
   if (correction_drift[num] > 0)
     drift=(float) (correction_drift[num]/8191.75f)+1.0f;
   else
@@ -154,12 +154,13 @@ float normalizeVoltage(float input){
  */
 ISR(TIMER1_OVF_vect)
 {
- TCNT1 = 65536-(16000000/1024/timer_freq); // timer reset
  unsigned long currentTime = micros();
  for (int i=0;i < n_saidas_pulso; i++){
-    if ((out_freq[i] > 2.0) && (currentTime - previousTime[i]) >= (unsigned long)(1000000.0f/(out_freq[i]*2))) { //each pulse is high and low, so freq is double
+    if ((out_freq[i] > 2.0) &&
+        (currentTime - previousTime[i]) >= (unsigned long)(1000000.0f/(out_freq[i]*2))) { //each pulse is high and low, so freq is double
       previousTime[i] = currentTime;
       digitalWrite(pulse_pin[i],!digitalRead(pulse_pin[i]));
     }
  }
+ TCNT1 = 65536-(16000000/1024/timer_freq); // timer reset
 }

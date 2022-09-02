@@ -33,7 +33,7 @@ void Menu() {
             case '2': subMenu_num(0); break;
             case '3': Serial.println(F("nao implementado")); break;
             case '4': diagnostic_mode=true; break;
-            case '5': Serial.println(F("bye...")); Serial.end(); return;
+            case '5': Serial.println(F("bye...")); Serial.end();
             case '6': resetFunc();
             default: continue;  // includes the case 'no input'
         }
@@ -42,7 +42,7 @@ void Menu() {
 }
 void subMenu_num(int position){
   int value;
-  EEPROM.get(position,value);
+  EEPROM.get(position*2,value);
   Serial.println("");
   Serial.println(value);
   Serial.print(F("*** Valor em memoria: "));

@@ -2,11 +2,13 @@
 #include "menu.h"
 #define timer_freq 3000
 
-#define injector_pin 12 // roxo
-#define consume_pin 11 // branco,cinza
-#define speed_in_pin 2 // verde
-#define speed_out_pin 3 // vermelho,laranja
-#define voltageIn A1 // interno para tensao do automovel
+#define injector_pin 12 // j3, roxo
+#define consume_pin 11 // j4, branco/cinza
+#define speed_in_pin 2 // j8, verde
+#define speed_out_pin 3 // j5, vermelho/laranja
+#define relayOut 10 // j11
+#define beep 13 // internal
+#define voltageIn A1 // internal
 
 const float injetor = 23; // vazao do injetor a 12v, em lbs/h
 
@@ -41,6 +43,8 @@ void setup()
   pinMode(speed_out_pin,OUTPUT);
   pinMode(speed_in_pin,INPUT);
   pinMode(voltageIn, INPUT);
+  pinMode(relayOut, OUTPUT);
+  pinMode(beep, OUTPUT);
   
   pulse_pin[0]=consume_pin;
   pulse_pin[1]=speed_out_pin;
@@ -102,6 +106,12 @@ void loop()
   }
   last_millis = millis();
 
+ /* if ((injectorInput.freq*60*1) > 6000){
+    digitalWrite(beep,HIGH);
+  }else{
+    digitalWrite(beep,LOW);
+  }*/
+
   delay(100);
 }
 
@@ -115,9 +125,15 @@ void setupTimer1(){
 
 void readFrequency(int pin, inputFreq *returnedValues){
   (*returnedValues).ontime = pulseInLong(pin,HIGH,200000);
-  (*returnedValues).offtime = pulseInLong(pin,LOW,200000); 
-  (*returnedValues).period = ((*returnedValues).ontime+(*returnedValues).offtime);
-  (*returnedValues).freq = (1000000.0f/(*returnedValues).period);
+  if ((*returnedValues).ontime == 0){
+     (*returnedValues).offtime = 0.0; 
+     (*returnedValues).period = 0.0;
+     (*returnedValues).freq = 0.0;
+  } else{
+    (*returnedValues).offtime = pulseInLong(pin,LOW,200000); 
+    (*returnedValues).period = ((*returnedValues).ontime+(*returnedValues).offtime);
+    (*returnedValues).freq = (1000000.0f/(*returnedValues).period);    
+  }
 }
 
 //Setup the frequency to output

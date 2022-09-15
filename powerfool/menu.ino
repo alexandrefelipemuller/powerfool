@@ -139,6 +139,8 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print(F("Tensao bateria: "));
     Serial.print(volts);
     Serial.println(F(" v"));
+    Serial.print(F("RPM: "));
+    Serial.println((int)(injectorInput.freq*60*1)); // 1 semi, 2 sequential
     Serial.println(F("Pressione ESC para sair"));
     if (Serial.read() == 27)
       diagnostic_mode = false;

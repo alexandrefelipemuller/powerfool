@@ -7,6 +7,7 @@
 * 0 = correction drift 0, consume (2 bytes)
 * 2 = correction drift 1, speed (2 bytes)
 * 4 = Total odometer (4 bytes)
+* 8 = Shift Beep (2 bytes)
 */
 void(* resetFunc) (void) = 0;
 
@@ -29,8 +30,8 @@ void Menu() {
  
     for (;;) {
         switch (Serial.read()) {
-            case '1': subMenu_num(1); break;
-            case '2': subMenu_num(0); break;
+            case '1': subMenu_num(1,true); break;
+            case '2': subMenu_num(0,true); break;
             case '3': Serial.println(F("nao implementado")); break;
             case '4': diagnostic_mode=true; break;
             case '5': Serial.println(F("bye...")); Serial.end();
@@ -40,15 +41,21 @@ void Menu() {
       break;
     }
 }
-void subMenu_num(int position){
+
+void subMenu_num(int position, bool isPercent){
   int value;
   EEPROM.get(position*2,value);
   Serial.println("");
-  Serial.println(value);
   Serial.print(F("*** Valor em memoria: "));
-  Serial.print(memValueToCorrection(value));
-  Serial.println("%");
-  Serial.println(F("Valor entre -99 (%) e +400 (%), sendo 0 sem correcao"));
+  if (isPercent){
+      Serial.print(memValueToCorrection(value));
+      Serial.println("%");
+      Serial.println(F("Valor entre -99 (%) e +400 (%), sendo 0 sem correcao"));
+  } else {
+      Serial.println(value);
+      Serial.println(F("Valor entre 0 e 32 mil, sendo 0 desabilitado"));
+  }
+  
   Serial.println(F("+ Aumentar"));
   Serial.println(F("- Diminuir"));
   Serial.println(F("a Aumentar 10x"));
@@ -88,9 +95,13 @@ void subMenu_num(int position){
           break;
             case 's': 
                 Serial.println("Salvando valor...");
-                Serial.println(value);
+                if (isPercent){
+                  Serial.println(memValueToCorrection(value));
+                  correction_drift[position] = value;
+                }else{
+                  Serial.println(value);
+                }
                 EEPROM.put(position*2, (int) value);
-                correction_drift[position] = value;
                 return;
             default: break;  // includes the case 'no input'
         }
@@ -140,23 +151,23 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print(volts);
     Serial.println(F(" v"));
     Serial.print(F("RPM: "));
-    Serial.println((int)(injectorInput.freq*60*1)); // 1 semi, 2 sequential
+    Serial.println((int)(injectorInput.freq * (60/1) )); // 1 semi, 2 sequential
     Serial.println(F("Pressione ESC para sair"));
     if (Serial.read() == 27)
       diagnostic_mode = false;
 }
 void subMenu_e(){
-  /* Serial.println("|***|  Special features  |***|");
+  Serial.println("|***|  Special features  |***|");
   Serial.println("");
   Serial.println("Select one of the following options:");
-  Serial.println("1 ");
-  Serial.println("2 ");
-  Serial.println("3 ");
-  Serial.println("4 ");
+  Serial.println("1 Shift Beep");
+  //Serial.println("2 ");
+  //Serial.println("3 ");
+  //Serial.println("4 ");
   Serial.println("5 Exit");
     for (;;) {
         switch (Serial.read()) {
-            case '1': Serial.println("nao implementado"); break;
+            case '1': subMenu_num(8,false); break;
             case '2': Serial.println("nao implementado"); break;
             case '3': Serial.println("nao implementado"); break;
             case '4': Serial.println("nao implementado"); break;
@@ -164,7 +175,7 @@ void subMenu_e(){
             default: continue;  // includes the case 'no input'
         }
       break;
-    }*/
+    }
 }
 
 void clearScreen(){

@@ -8,6 +8,8 @@
 * 2 = correction drift 1, speed (2 bytes)
 * 4 = Total odometer (4 bytes)
 * 8 = Shift Beep (2 bytes)
+* 10 = rpm alerta (2 bytes)
+* 12 = pressao sensor (2 bytes)
 */
 void(* resetFunc) (void) = 0;
 
@@ -30,21 +32,22 @@ void Menu() {
  
     for (;;) {
         switch (Serial.read()) {
-            case '1': subMenu_num(1,true); break;
+            case '1': subMenu_num(2,true); break;
             case '2': subMenu_num(0,true); break;
-            case '3': Serial.println(F("nao implementado")); break;
+            case '3': subMenu_e(); break;
             case '4': diagnostic_mode=true; break;
             case '5': Serial.println(F("bye...")); Serial.end();
             case '6': resetFunc();
             default: continue;  // includes the case 'no input'
         }
+      Menu();
       break;
     }
 }
 
 void subMenu_num(int position, bool isPercent){
   int value;
-  EEPROM.get(position*2,value);
+  EEPROM.get(position,value);
   Serial.println("");
   Serial.print(F("*** Valor em memoria: "));
   if (isPercent){
@@ -55,7 +58,6 @@ void subMenu_num(int position, bool isPercent){
       Serial.println(value);
       Serial.println(F("Valor entre 0 e 32 mil, sendo 0 desabilitado"));
   }
-  
   Serial.println(F("+ Aumentar"));
   Serial.println(F("- Diminuir"));
   Serial.println(F("a Aumentar 10x"));
@@ -66,53 +68,60 @@ void subMenu_num(int position, bool isPercent){
         switch (Serial.read()) {
             case '0':
               value=0;
-              numberEntry(value,position);
+              numberEntry(value,position,isPercent);
               break;
             case '+':
               if (value > 32717)
                 value = 32717;
           		value+=50;
-              numberEntry(value,position);
+              numberEntry(value,position,isPercent);
   		        break;
             case '-':
                 if (value <= -32718)
                    value = -32718;
                 value-=50;
-              numberEntry(value,position);
+              numberEntry(value,position,isPercent);
           		break;
             case 'a': 
                 if (value > 31768)
                   value = 31767;
                 value+=1000;
-          	    numberEntry(value,position);
+          	    numberEntry(value,position,isPercent);
        			break;
             case 'd': 
                 if (value <= -31768)
                    value = -31767;
                 value-=1000;
-          		numberEntry(value,position);
+          		numberEntry(value,position,isPercent);
        			break;
           break;
             case 's': 
                 Serial.println("Salvando valor...");
                 if (isPercent){
                   Serial.println(memValueToCorrection(value));
-                  correction_drift[position] = value;
+                  correction_drift[position/2] = value;
                 }else{
                   Serial.println(value);
                 }
-                EEPROM.put(position*2, (int) value);
+                EEPROM.put(position, (int) value);
                 return;
             default: break;  // includes the case 'no input'
         }
     }
 }
 
-void numberEntry(int value, int position){
-  Serial.print(F("Novo valor: ")); 
-  Serial.print(memValueToCorrection(value));
-  correction_drift[position] = value;
-  Serial.println(F("% de correcao, opcoes +, -, a, d ou s para sair e salvar"));
+void numberEntry(int value, int position, bool isPercent){
+  Serial.print(F("Novo valor: "));
+  if (isPercent){
+     Serial.print(memValueToCorrection(value));
+     correction_drift[position/2] = value;
+     Serial.println(F("% de correcao, opcoes +, -, a, d ou s para sair e salvar"));
+  }
+  else{
+     Serial.print(value);
+     Serial.println(F(", opcoes +, -, a, d ou s para sair e salvar"));  
+  }
+    
 }
 
 float memValueToCorrection(int value){
@@ -152,29 +161,32 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.println(F(" v"));
     Serial.print(F("RPM: "));
     Serial.println((int)(injectorInput.freq * (60/1) )); // 1 semi, 2 sequential
+    Serial.print(F("Pressao sensor: "));
+    Serial.println((int)sensorPressureVal); // 1 semi, 2 sequential
     Serial.println(F("Pressione ESC para sair"));
     if (Serial.read() == 27)
       diagnostic_mode = false;
 }
 void subMenu_e(){
-  Serial.println("|***|  Special features  |***|");
-  Serial.println("");
-  Serial.println("Select one of the following options:");
-  Serial.println("1 Shift Beep");
-  //Serial.println("2 ");
-  //Serial.println("3 ");
-  //Serial.println("4 ");
-  Serial.println("5 Exit");
+    Serial.println(F("|****************************|"));
+    Serial.println(F("|***|  Special features  |***|"));
+    Serial.println(F("|****************************|"));
+    Serial.println("");
+    Serial.println(F("Select one of the following options:"));
+    Serial.println(F("1 Shift Beep"));
+    Serial.println(F("2 Rotacao minima sensor pressao"));
+    Serial.println(F("3 Pressao minima sensor (1000 = 1 bar)"));
+    Serial.println(F("4 Exit"));
     for (;;) {
         switch (Serial.read()) {
             case '1': subMenu_num(8,false); break;
-            case '2': Serial.println("nao implementado"); break;
-            case '3': Serial.println("nao implementado"); break;
-            case '4': Serial.println("nao implementado"); break;
-            case '5': Serial.end(); return;
+            case '2': subMenu_num(10,false); break;
+            case '3': subMenu_num(12,false); break;
+            case '4': return;
             default: continue;  // includes the case 'no input'
         }
-      break;
+        subMenu_e();
+        break;
     }
 }
 

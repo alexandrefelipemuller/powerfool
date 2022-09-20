@@ -9,21 +9,24 @@
 #define relayOut 10 // j11
 #define beep 13 // internal
 #define voltageIn A1 // internal
+#define sensorPressure A2 //
 
 const float injetor = 23; // vazao do injetor a 12v, em lbs/h
 
 // set up pulse pins
-#define n_saidas_pulso 2
-float out_freq[n_saidas_pulso] = {1,1};
-unsigned long previousTime[n_saidas_pulso] = {0,0};
+#define n_saidas_pulso 3
+float out_freq[n_saidas_pulso] = {1,1,1};
+unsigned long previousTime[n_saidas_pulso] = {0,0,0};
 //Define pinos para pulsar, devem ser iniciador em setup
-int pulse_pin[n_saidas_pulso] = {-1,-1}; 
-int correction_drift[n_saidas_pulso] = {0,0}; 
+int pulse_pin[n_saidas_pulso] = {-1,-1,-1}; 
+int correction_drift[n_saidas_pulso] = {0,0,0}; 
 
 bool diagnostic_mode = false;
 
 unsigned long last_millis;
 unsigned long totalMileage, tripA;
+unsigned short int rpmBeep, rpmAlert, minPressure;
+int sensorPressureVal;
 
 struct inputFreq{
   unsigned long ontime;
@@ -43,23 +46,30 @@ void setup()
   pinMode(speed_out_pin,OUTPUT);
   pinMode(speed_in_pin,INPUT);
   pinMode(voltageIn, INPUT);
+  pinMode(sensorPressure,INPUT);
   pinMode(relayOut, OUTPUT);
   pinMode(beep, OUTPUT);
   
   pulse_pin[0]=consume_pin;
   pulse_pin[1]=speed_out_pin;
+  pulse_pin[2]=beep;
   
   if (EEPROM.read(0) == 255){
     //First boot, clear memory
     EEPROM.put(0,(int)0);
     EEPROM.put(2,(int)0);
     EEPROM.put(4,(long)0);
+    EEPROM.put(8,(int)0);
+    EEPROM.put(10,(int)0);
  
   } 
   //Load values
   EEPROM.get(0,correction_drift[0]);
   EEPROM.get(2,correction_drift[1]);
   EEPROM.get(4,totalMileage);
+  EEPROM.get(8,rpmBeep);
+  EEPROM.get(10,rpmAlert);
+  EEPROM.get(12,minPressure);
   
   setupTimer1();
 }
@@ -89,12 +99,6 @@ void loop()
   else
     setOutFrequency(speedInput.freq,1);
    
-  if (diagnostic_mode){
-    clearScreen();
-    diagnosticReport(injectorInput, speedInput, consumption, volts);
-    delay(150);
-  }
-
   //Calculate distance
   unsigned long elapsedtime = millis() - last_millis;
   odometer += (elapsedtime*out_freq[1])/4860.0f; //meters
@@ -106,12 +110,24 @@ void loop()
   }
   last_millis = millis();
 
- /* if ((injectorInput.freq*60*1) > 6000){
+  /* Alerts */
+  int rpm = injectorInput.freq*60;
+  if (rpmBeep > 0 && (rpm > rpmBeep)){
     digitalWrite(beep,HIGH);
   }else{
     digitalWrite(beep,LOW);
-  }*/
+  }
+  sensorPressureVal = map(analogRead(A2), 204, 1024, 0, 10000);
+  if (rpmAlert > 0 && rpm > rpmAlert && sensorPressureVal < minPressure){
+    digitalWrite(relayOut,HIGH);
+    setOutFrequency(3,2);
+  }
 
+  if (diagnostic_mode){
+    clearScreen();
+    diagnosticReport(injectorInput, speedInput, consumption, volts);
+    delay(100);
+  }
   delay(100);
 }
 

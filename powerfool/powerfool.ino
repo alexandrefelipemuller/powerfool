@@ -4,12 +4,19 @@
 
 #define speed_in_pin 2 // j8, verde
 #define speed_out_pin 3 // j5, vermelho/laranja
+#define wasteGateOut 4
+#define intakeAirTempOut 5
+#define wideBandOut 6
 #define relayOut 10 // j11
 #define consume_pin 11 // j4, branco/cinza
 #define injector_pin 12 // j3, roxo
 #define beep 13 // internal
+#define wideBandSensor A0
 #define voltageIn A1 // internal
 #define sensorPressure A2 // azul
+#define intakeAirTemp A3
+#define wasteGate A6
+#define sensorPressure2 A7 // marrom
 
 const float injetor = 23; // vazao do injetor a 12v, em lbs/h
 

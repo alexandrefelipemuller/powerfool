@@ -2,14 +2,14 @@
 #include "menu.h"
 #define timer_freq 3000
 
-#define injector_pin 12 // j3, roxo
-#define consume_pin 11 // j4, branco/cinza
 #define speed_in_pin 2 // j8, verde
 #define speed_out_pin 3 // j5, vermelho/laranja
 #define relayOut 10 // j11
+#define consume_pin 11 // j4, branco/cinza
+#define injector_pin 12 // j3, roxo
 #define beep 13 // internal
 #define voltageIn A1 // internal
-#define sensorPressure A2 //
+#define sensorPressure A2 // azul
 
 const float injetor = 23; // vazao do injetor a 12v, em lbs/h
 
@@ -26,7 +26,6 @@ bool diagnostic_mode = false;
 unsigned long last_millis;
 unsigned long totalMileage, tripA;
 unsigned short int rpmBeep, rpmAlert, minPressure;
-int sensorPressureVal;
 
 struct inputFreq{
   unsigned long ontime;
@@ -36,19 +35,19 @@ struct inputFreq{
 };
 typedef struct inputFreq inputFreq;
 
-float drift, duty, odometer = 0;
+float odometer = 0;
 
 void setup()
 {
   Serial.begin(9600);
   pinMode(injector_pin,INPUT);
-  pinMode(consume_pin,OUTPUT);
-  pinMode(speed_out_pin,OUTPUT);
   pinMode(speed_in_pin,INPUT);
   pinMode(voltageIn, INPUT);
   pinMode(sensorPressure,INPUT);
   pinMode(relayOut, OUTPUT);
   pinMode(beep, OUTPUT);
+  pinMode(consume_pin,OUTPUT);
+  pinMode(speed_out_pin,OUTPUT);
   
   pulse_pin[0]=consume_pin;
   pulse_pin[1]=speed_out_pin;
@@ -83,7 +82,7 @@ void loop()
   
   inputFreq injectorInput, speedInput;
   readFrequency(injector_pin, &injectorInput);
-  duty = (float)injectorInput.offtime/(float)(injectorInput.period); 
+  float duty = (float)injectorInput.offtime/(float)(injectorInput.period); 
   float vazao = injetor * (0.126);// * (normalizeVoltage(volts)/12); // correction by voltage, result in ml/s 
   float consumption = injectorInput.freq*vazao*duty;
    
@@ -117,15 +116,20 @@ void loop()
   }else{
     digitalWrite(beep,LOW);
   }
-  sensorPressureVal = map(analogRead(A2), 204, 1024, 0, 10000);
+  int sensorPressureVal = map(analogRead(A2), 204, 1024, 0, 10000);
   if (rpmAlert > 0 && rpm > rpmAlert && sensorPressureVal < minPressure){
     digitalWrite(relayOut,HIGH);
     setOutFrequency(3,2);
   }
+  /*int sensorPressureVal2 = map(analogRead(A7), 204, 1024, 0, 10000);
+  if (rpmAlert > 0 && rpm > rpmAlert && sensorPressureVal2 < minPressure){
+    digitalWrite(relayOut,HIGH);
+    setOutFrequency(3,2);
+  }*/
 
   if (diagnostic_mode){
     clearScreen();
-    diagnosticReport(injectorInput, speedInput, consumption, volts);
+    diagnosticReport(injectorInput, speedInput, consumption, volts, sensorPressureVal);
     delay(100);
   }
   delay(100);

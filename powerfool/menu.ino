@@ -130,7 +130,7 @@ float memValueToCorrection(int value){
   else
     return float (value/327.67f);
 }
-void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consumption, float volts){
+void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consumption, float volts, int sensorPressureVal){
     Serial.print(F("Entrada velocidade: "));
     Serial.println(speedInput.freq);
     Serial.print(F("Saida velocidade: "));
@@ -147,7 +147,7 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print(F("Entrada injetores: "));
     Serial.print(injectorInput.freq);
     Serial.print(F("Hz, (%)"));
-    Serial.println(duty);  
+    Serial.println((float)injectorInput.offtime/(float)(injectorInput.period));  
     Serial.print(F("Saida consumo: "));
     Serial.println(out_freq[0]);
     Serial.print(F("Consumo: "));
@@ -162,7 +162,7 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print(F("RPM: "));
     Serial.println((int)(injectorInput.freq * (60/1) )); // 1 semi, 2 sequential
     Serial.print(F("Pressao sensor: "));
-    Serial.println((int)sensorPressureVal); // 1 semi, 2 sequential
+    Serial.println((int)sensorPressureVal);
     Serial.println(F("Pressione ESC para sair"));
     if (Serial.read() == 27)
       diagnostic_mode = false;

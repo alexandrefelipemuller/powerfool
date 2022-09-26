@@ -32,7 +32,7 @@ bool diagnostic_mode = false;
 
 unsigned long last_millis;
 unsigned long totalMileage, tripA;
-unsigned short int rpmBeep, rpmAlert, minPressure;
+unsigned short int rpmBeep, rpmAlert, minPressure, speedSensor;
 
 struct inputFreq{
   unsigned long ontime;
@@ -51,10 +51,17 @@ void setup()
   pinMode(speed_in_pin,INPUT);
   pinMode(voltageIn, INPUT);
   pinMode(sensorPressure,INPUT);
+  pinMode(wideBandSensor,INPUT);
+  pinMode(intakeAirTemp,INPUT);
+  pinMode(wasteGate,INPUT);
+  pinMode(sensorPressure2,INPUT);
   pinMode(relayOut, OUTPUT);
   pinMode(beep, OUTPUT);
   pinMode(consume_pin,OUTPUT);
   pinMode(speed_out_pin,OUTPUT);
+  pinMode(wasteGateOut,OUTPUT);
+  pinMode(intakeAirTempOut,OUTPUT);
+  pinMode(wideBandOut,OUTPUT);
   
   pulse_pin[0]=consume_pin;
   pulse_pin[1]=speed_out_pin;
@@ -67,6 +74,8 @@ void setup()
     EEPROM.put(4,(long)0);
     EEPROM.put(8,(int)0);
     EEPROM.put(10,(int)0);
+    EEPROM.put(12,(int)0);
+    EEPROM.put(14,(int)4860);
  
   } 
   //Load values
@@ -76,6 +85,7 @@ void setup()
   EEPROM.get(8,rpmBeep);
   EEPROM.get(10,rpmAlert);
   EEPROM.get(12,minPressure);
+  EEPROM.get(14,speedSensor);
   
   setupTimer1();
 }
@@ -107,7 +117,7 @@ void loop()
    
   //Calculate distance
   unsigned long elapsedtime = millis() - last_millis;
-  odometer += (elapsedtime*out_freq[1])/4860.0f; //meters
+  odometer += (elapsedtime*out_freq[1])/((float) speedSensor); //meters
   if (odometer > 500.0){
     tripA += odometer;
     totalMileage += odometer;

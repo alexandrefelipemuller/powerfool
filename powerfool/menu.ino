@@ -10,6 +10,8 @@
 * 8 = Shift Beep (2 bytes)
 * 10 = rpm alerta (2 bytes)
 * 12 = pressao sensor (2 bytes)
+* 14 = pulses per km, speed sensor (2 bytes)
+*   Renault 4860, chevrolet 15200
 */
 void(* resetFunc) (void) = 0;
 
@@ -21,23 +23,21 @@ void Menu() {
   Serial.println(F("|****************************|"));
   Serial.println("");
   Serial.println(F("Select one of the following options:"));
-  Serial.println(F("1 Ajuste Velocidade"));
-  Serial.println(F("2 Ajuste Computador de bordo"));
-  Serial.println(F("3 Funcoes especiais"));
-  Serial.println(F("4 Modo diagnostico"));
-  Serial.println(F("5 Sair do menu"));
-  Serial.println(F("6 Reboot"));
+  Serial.println(F("1 Ajustes"));
+  Serial.println(F("2 Funcoes especiais"));
+  Serial.println(F("3 Modo diagnostico"));
+  Serial.println(F("4 Sair do menu"));
+  Serial.println(F("5 Reboot"));
   Serial.print(F("* Version:"));
   Serial.println(SW_VERSION,DEC);
  
     for (;;) {
         switch (Serial.read()) {
-            case '1': subMenu_num(2,true); break;
-            case '2': subMenu_num(0,true); break;
-            case '3': subMenu_e(); break;
-            case '4': diagnostic_mode=true; break;
-            case '5': Serial.println(F("bye...")); Serial.end();
-            case '6': resetFunc();
+            case '1': subMenu_a(); break;
+            case '2': subMenu_e(); break;
+            case '3': diagnostic_mode=true; break;
+            case '4': Serial.println(F("bye...")); Serial.end();
+            case '5': resetFunc();
             default: continue;  // includes the case 'no input'
         }
       Menu();
@@ -142,7 +142,7 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.println(tripA);
  
     Serial.print(F("Velocidade: "));
-    Serial.print(out_freq[1]/1.35f); //Parametrize it later
+    Serial.print(out_freq[1]/((float) (speedSensor/3600.0f)));
     Serial.println(F(" km/h"));
     Serial.print(F("Entrada injetores: "));
     Serial.print(injectorInput.freq);
@@ -154,7 +154,7 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print(consumption);
     Serial.println(F(" ml/s"));
     Serial.print(F("Consumo Instantaneo: "));
-    Serial.print((out_freq[1]/4.86f)/consumption);
+    Serial.print((out_freq[1]/((float) (speedSensor/1000.0f)))/consumption);
     Serial.println(F(" km/l"));
     Serial.print(F("Tensao bateria: "));
     Serial.print(volts);
@@ -182,6 +182,28 @@ void subMenu_e(){
             case '1': subMenu_num(8,false); break;
             case '2': subMenu_num(10,false); break;
             case '3': subMenu_num(12,false); break;
+            case '4': return;
+            default: continue;  // includes the case 'no input'
+        }
+        subMenu_e();
+        break;
+    }
+}
+void subMenu_a(){
+    Serial.println(F("|****************************|"));
+    Serial.println(F("|***|     Ajustes        |***|"));
+    Serial.println(F("|****************************|"));
+    Serial.println("");
+    Serial.println(F("Select one of the following options:"));
+    Serial.println(F("1 Leitura sensor de velocidade"));
+    Serial.println(F("2 Saida sensor de velocidade"));
+    Serial.println(F("3 Saida sinal de consumo"));
+    Serial.println(F("4 Exit"));
+    for (;;) {
+        switch (Serial.read()) {
+            case '1': subMenu_num(14,false); break;
+            case '2': subMenu_num(2,true); break;
+            case '3': subMenu_num(0,true); break;
             case '4': return;
             default: continue;  // includes the case 'no input'
         }

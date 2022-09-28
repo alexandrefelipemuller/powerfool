@@ -15,12 +15,20 @@
 */
 void(* resetFunc) (void) = 0;
 
+void printBannerMsg(char *message){
+  Serial.println(F("|****************************|"));
+  Serial.print(F("|**| "));
+  Serial.print(message); 
+  for (int i=strlen(message)-1; i < 20; i++)
+    Serial.print(" ");
+  Serial.println(F("|**|"));
+  Serial.println(F("|****************************|"));
+}
+
 void Menu() {
   if (diagnostic_mode)
     return;
-  Serial.println(F("|****************************|"));
-  Serial.println(F("|**| Dashlane  Setup Menu |**|"));
-  Serial.println(F("|****************************|"));
+  printBannerMsg(F("Dashlane  Setup Menu"));
   Serial.println("");
   Serial.println(F("Select one of the following options:"));
   Serial.println(F("1 Ajustes"));
@@ -45,8 +53,27 @@ void Menu() {
     }
 }
 
-void subMenu_num(int position, bool isPercent){
-  int value;
+typedef enum {
+    UCHAR,
+    UINT,
+    CHAR,
+    INT
+} varType;
+
+/* Prompt user and store a numerical parameter */  
+void subMenu_num(int position, bool isPercent, varType t){
+  unsigned char step;
+  switch(t){
+      case UCHAR:
+          unsigned char value;
+          step=1;
+          break;
+      case INT:
+          step=50;
+          int value;
+          break;
+    default:
+  }
   EEPROM.get(position,value);
   Serial.println("");
   Serial.print(F("*** Valor em memoria: "));
@@ -68,31 +95,26 @@ void subMenu_num(int position, bool isPercent){
         switch (Serial.read()) {
             case '0':
               value=0;
-              numberEntry(value,position,isPercent);
               break;
             case '+':
               if (value > 32717)
                 value = 32717;
-          		value+=50;
-              numberEntry(value,position,isPercent);
+          		value+=step;
   		        break;
             case '-':
                 if (value <= -32718)
                    value = -32718;
-                value-=50;
-              numberEntry(value,position,isPercent);
+                value-=step;
           		break;
             case 'a': 
                 if (value > 31768)
                   value = 31767;
-                value+=1000;
-          	    numberEntry(value,position,isPercent);
+                value+=(step*10);
        			break;
             case 'd': 
                 if (value <= -31768)
                    value = -31767;
-                value-=1000;
-          		numberEntry(value,position,isPercent);
+                value-=step(*10);
        			break;
           break;
             case 's': 
@@ -107,6 +129,7 @@ void subMenu_num(int position, bool isPercent){
                 return;
             default: break;  // includes the case 'no input'
         }
+       numberEntry(value,position,isPercent);
     }
 }
 
@@ -121,7 +144,6 @@ void numberEntry(int value, int position, bool isPercent){
      Serial.print(value);
      Serial.println(F(", opcoes +, -, a, d ou s para sair e salvar"));  
   }
-    
 }
 
 float memValueToCorrection(int value){
@@ -168,21 +190,22 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
       diagnostic_mode = false;
 }
 void subMenu_e(){
-    Serial.println(F("|****************************|"));
-    Serial.println(F("|***|  Special features  |***|"));
-    Serial.println(F("|****************************|"));
+    printBannerMsg(F("Special features"));
     Serial.println("");
     Serial.println(F("Select one of the following options:"));
     Serial.println(F("1 Shift Beep"));
     Serial.println(F("2 Rotacao minima sensor pressao"));
     Serial.println(F("3 Pressao minima sensor (1000 = 1 bar)"));
-    Serial.println(F("4 Exit"));
+    Serial.println(F("4 Aviso velocidade excedida em km/h"));
+    Serial.println(F("5 Exit"));
+    varType type;
     for (;;) {
         switch (Serial.read()) {
-            case '1': subMenu_num(8,false); break;
-            case '2': subMenu_num(10,false); break;
-            case '3': subMenu_num(12,false); break;
-            case '4': return;
+            case '1': type = varType.INT; subMenu_num(8,false,type); break;
+            case '2': type = varType.INT; subMenu_num(10,false,type); break;
+            case '3': type = varType.INT; subMenu_num(12,false,type); break;
+            case '4': type = varType.UCHAR; subMenu_num(14,false,type); break;
+            case '5': return;
             default: continue;  // includes the case 'no input'
         }
         subMenu_e();
@@ -190,20 +213,19 @@ void subMenu_e(){
     }
 }
 void subMenu_a(){
-    Serial.println(F("|****************************|"));
-    Serial.println(F("|***|     Ajustes        |***|"));
-    Serial.println(F("|****************************|"));
+    printBannerMsg(F("Ajustes"));
     Serial.println("");
     Serial.println(F("Select one of the following options:"));
     Serial.println(F("1 Leitura sensor de velocidade"));
     Serial.println(F("2 Saida sensor de velocidade"));
     Serial.println(F("3 Saida sinal de consumo"));
     Serial.println(F("4 Exit"));
+    varType type;
     for (;;) {
         switch (Serial.read()) {
-            case '1': subMenu_num(14,false); break;
-            case '2': subMenu_num(2,true); break;
-            case '3': subMenu_num(0,true); break;
+            case '1':  type = varType.INT; subMenu_num(14,false,type); break;
+            case '2':  type = varType.INT; subMenu_num(2,true,type); break;
+            case '3':  type = varType.INT; subMenu_num(0,true,type); break;
             case '4': return;
             default: continue;  // includes the case 'no input'
         }

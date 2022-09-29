@@ -33,6 +33,8 @@ bool diagnostic_mode = false;
 unsigned long last_millis;
 unsigned long totalMileage, tripA;
 unsigned short int rpmBeep, rpmAlert, minPressure, speedSensor;
+unsigned char speedLimit, doorLockspd;
+bool doorLocked = false;
 
 struct inputFreq{
   unsigned long ontime;
@@ -86,6 +88,8 @@ void setup()
   EEPROM.get(10,rpmAlert);
   EEPROM.get(12,minPressure);
   EEPROM.get(14,speedSensor);
+  EEPROM.get(16,speedLimit);
+  EEPROM.get(17,doorLockspd);
   
   setupTimer1();
 }
@@ -125,6 +129,20 @@ void loop()
     EEPROM.put(4, totalMileage);
   }
   last_millis = millis();
+
+  //Speed
+  unsigned char currentSpeed = (unsigned char) (out_freq[1]/((float) (speedSensor/3600.0f)));
+  if (doorLockspd > 0 && !doorLocked && currentSpeed > doorLockspd){
+    digitalWrite(relayOut,HIGH);
+    delay(300);
+    digitalWrite(relayOut,LOW);
+    doorLocked=true;
+  }
+  if (speedLimit > 0 && currentSpeed > speedLimit)
+    digitalWrite(beep,HIGH);
+  else
+    digitalWrite(beep,LOW);
+   
 
   /* Alerts */
   int rpm = injectorInput.freq*60;

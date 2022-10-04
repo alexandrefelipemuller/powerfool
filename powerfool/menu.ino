@@ -14,6 +14,9 @@
 *   Old VW 1800, Renault 4860, VW Fox 5000, chevrolet 15200
 * 16 = speed limit (1 byte)
 * 17 = lock doors speed (1 byte)
+* 18 = Settings binary array (2 bytes)
+*     0 - speed beep type
+*     1 - injection sequential/semi
 */
 void(* resetFunc) (void) = 0;
 
@@ -54,7 +57,6 @@ void Menu() {
       break;
     }
 }
-
 
 
 /* Prompt user and store a numerical parameter */  
@@ -148,6 +150,11 @@ void subMenu_num(int position, bool isPercent, varType t){
     }
 }
 
+void settingsChange(unsigned char num){
+  int bitv = (1 << num);
+  settings ^= bitv;
+  EEPROM.put(18, (int) settings);
+}
 void numberEntry(int value, int position, bool isPercent){
   Serial.print(F("Novo valor: "));
   if (isPercent){
@@ -197,7 +204,7 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print(volts);
     Serial.println(F(" v"));
     Serial.print(F("RPM: "));
-    Serial.println((int)(injectorInput.freq * (60/1) )); // 1 semi, 2 sequential
+    Serial.println((int)(injectorInput.freq * 60 *((settings & 2 == 0)*2) )); // semi, sequential
     Serial.print(F("Pressao sensor: "));
     Serial.println((int)sensorPressureVal);
     Serial.println(F("Pressione ESC para sair"));
@@ -211,7 +218,12 @@ void subMenu_e(){
     Serial.println(F("2 Rotacao minima sensor pressao"));
     Serial.println(F("3 Pressao minima sensor (1000 = 1 bar)"));
     Serial.println(F("4 Aviso velocidade excedida em km/h"));
-    Serial.println(F("5 Travamento automatico de portas km/h"));
+    Serial.print(F("5 Mudar tipo aviso velocidade excedida, beep:"));    
+    if (settings%2 == 0)
+      Serial.println(F(" (continuo)")); 
+    else
+      Serial.println(F(" (curto)")); 
+    Serial.println(F("6 Travamento automatico de portas km/h"));
     Serial.println(F("ESC Voltar"));
     varType typev = INT;
     for (;;) {
@@ -220,7 +232,8 @@ void subMenu_e(){
             case '2': subMenu_num(10,false,typev); break;
             case '3': subMenu_num(12,false,typev); break;
             case '4': typev = UCHAR; subMenu_num(16,false,typev); break;
-            case '5': typev = UCHAR; subMenu_num(17,false,typev); break;
+            case '5': settingsChange(0); break;
+            case '6': typev = UCHAR; subMenu_num(17,false,typev); break;
             case 27: return;
             default: continue;  // includes the case 'no input'
         }
@@ -234,6 +247,11 @@ void subMenu_a(){
     Serial.println(F("1 Leitura sensor de velocidade"));
     Serial.println(F("2 Saida sensor de velocidade"));
     Serial.println(F("3 Saida sinal de consumo"));
+        Serial.print(F("5 Mudar leitura tipo injeção:"));    
+    if (settings & 2 == 0)
+      Serial.println(F(" (semisequencial)")); 
+    else
+      Serial.println(F(" (sequencial)")); 
     Serial.println(F("ESC Voltar"));
     varType typev = INT;
     for (;;) {
@@ -241,6 +259,7 @@ void subMenu_a(){
             case '1':  subMenu_num(14,false,typev); break;
             case '2':  subMenu_num(2,true,typev); break;
             case '3':  subMenu_num(0,true,typev); break;
+            case '4':  settingsChange(1); break;
             case 27: return;
             default: continue;  // includes the case 'no input'
         }

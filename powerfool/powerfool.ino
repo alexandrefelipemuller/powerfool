@@ -69,31 +69,7 @@ void setup()
   pulse_pin[1]=speed_out_pin;
   pulse_pin[2]=beep;
   
-  if (EEPROM.read(0) == 255){
-    //First boot, clear memory
-    EEPROM.put(0,(int)0);
-    EEPROM.put(2,(int)0);
-    EEPROM.put(4,(long)0);
-    EEPROM.put(8,(int)0);
-    EEPROM.put(10,(int)0);
-    EEPROM.put(12,(int)0);
-    EEPROM.put(14,(int)4860);
-    EEPROM.put(16,(char)0);
-    EEPROM.put(17,(char)0);
-    EEPROM.put(18,(int)0);
- 
-  } 
-  //Load values
-  EEPROM.get(0,correction_drift[0]);
-  EEPROM.get(2,correction_drift[1]);
-  EEPROM.get(4,totalMileage);
-  EEPROM.get(8,rpmBeep);
-  EEPROM.get(10,rpmAlert);
-  EEPROM.get(12,minPressure);
-  EEPROM.get(14,speedSensor);
-  EEPROM.get(16,speedLimit);
-  EEPROM.get(17,doorLockspd);
-  EEPROM.get(18,settings);
+  loadMemoryValues();
   
   setupTimer1();
 }
@@ -108,7 +84,7 @@ void loop()
   inputFreq injectorInput, speedInput;
   readFrequency(injector_pin, &injectorInput);
   float duty = (float)injectorInput.offtime/(float)(injectorInput.period); 
-  float vazao = injetor * (0.126);// * (normalizeVoltage(volts)/12); // correction by voltage, result in ml/s 
+  float vazao = injetor * (0.126); // result in ml/s 
   float consumption = injectorInput.freq*vazao*duty;
    
   // 0.083 Renault empirical constant
@@ -135,8 +111,58 @@ void loop()
   last_millis = millis();
 
   //Speed
-  unsigned char currentSpeed = (unsigned char) (out_freq[1]/((float) (speedSensor/3600.0f)));
-  if (doorLockspd > 0 && !doorLocked && currentSpeed > doorLockspd){
+  unsigned char currentSpeed = (unsigned char) (out_freq[1]/((float) (speedSensor/3600.0f)));    
+  speedManager(currentSpeed);
+  
+  /* Alerts */
+  int rpm = injectorInput.freq*60*((settings & 2 == 0)*2);
+  int sensorPressureVal = alertsManager(rpm);
+
+  if (diagnostic_mode){
+    clearScreen();
+    diagnosticReport(injectorInput, speedInput, consumption, volts, sensorPressureVal);
+    delay(100);
+  }
+  delay(100);
+}
+
+void setupTimer1(){
+  TCCR1A = 0;                        //confira timer para operação normal pinos OC1A e OC1B desconectados
+  TCCR1B = 0;                        //limpa registrador
+  TCCR1B |= (1<<CS10)|(1 << CS12);   // configura prescaler para 1024: CS12 = 1 e CS10 = 1
+  TCNT1 = 65536-(16000000/1024/timer_freq); //configura timer
+  TIMSK1 |= (1 << TOIE1);           // habilita a interrupção do TIMER1
+}
+
+void loadMemoryValues(){
+    if (EEPROM.read(0) == 255){
+    //First boot, clear memory
+    EEPROM.put(0,(int)0);
+    EEPROM.put(2,(int)0);
+    EEPROM.put(4,(long)0);
+    EEPROM.put(8,(int)0);
+    EEPROM.put(10,(int)0);
+    EEPROM.put(12,(int)0);
+    EEPROM.put(14,(int)4860);
+    EEPROM.put(16,(char)0);
+    EEPROM.put(17,(char)0);
+    EEPROM.put(18,(int)0);
+  } 
+  //Load values
+  EEPROM.get(0,correction_drift[0]);
+  EEPROM.get(2,correction_drift[1]);
+  EEPROM.get(4,totalMileage);
+  EEPROM.get(8,rpmBeep);
+  EEPROM.get(10,rpmAlert);
+  EEPROM.get(12,minPressure);
+  EEPROM.get(14,speedSensor);
+  EEPROM.get(16,speedLimit);
+  EEPROM.get(17,doorLockspd);
+  EEPROM.get(18,settings);
+}
+
+void speedManager(int currentSpeed){
+    if (doorLockspd > 0 && !doorLocked && currentSpeed > doorLockspd){
     digitalWrite(relayOut,HIGH);
     delay(300);
     digitalWrite(relayOut,LOW);
@@ -157,10 +183,9 @@ void loop()
     digitalWrite(beep,LOW);
     speedBeep=false;
   }
-    
+}
 
-  /* Alerts */
-  int rpm = injectorInput.freq*60*((settings & 2 == 0)*2);
+int alertsManager(int rpm){
   if (rpmBeep > 0 && (rpm > rpmBeep)){
     digitalWrite(beep,HIGH);
   }else{
@@ -176,21 +201,7 @@ void loop()
     digitalWrite(relayOut,HIGH);
     setOutFrequency(3,2);
   }*/
-
-  if (diagnostic_mode){
-    clearScreen();
-    diagnosticReport(injectorInput, speedInput, consumption, volts, sensorPressureVal);
-    delay(100);
-  }
-  delay(100);
-}
-
-void setupTimer1(){
-  TCCR1A = 0;                        //confira timer para operação normal pinos OC1A e OC1B desconectados
-  TCCR1B = 0;                        //limpa registrador
-  TCCR1B |= (1<<CS10)|(1 << CS12);   // configura prescaler para 1024: CS12 = 1 e CS10 = 1
-  TCNT1 = 65536-(16000000/1024/timer_freq); //configura timer
-  TIMSK1 |= (1 << TOIE1);           // habilita a interrupção do TIMER1
+  return sensorPressureVal;
 }
 
 void readFrequency(int pin, inputFreq *returnedValues){
@@ -223,16 +234,6 @@ void setOutFrequency(float baseFreq, int num){
   else
     drift=(float) (correction_drift[num]+32767)/32767.0f;
   out_freq[num]=(baseFreq*drift);
-}
-
-float normalizeVoltage(float input){
-  if (input < 12)
-    return 12.0;
-  else
-    if (input > 15)
-      return 15.0;
-    else
-      return input;
 }
 
 

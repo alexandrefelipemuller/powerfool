@@ -190,9 +190,10 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.println(F(" km/h"));
     Serial.print(F("Entrada injetores: "));
     Serial.print(injectorInput.freq);
-    Serial.print(F("Hz, (%)"));
-    Serial.println((float)injectorInput.offtime/(float)(injectorInput.period));  
-    Serial.print(F("Saida consumo: "));
+    Serial.print("Hz, (%)");
+    float duty = (float)injectorInput.offtime/(float)(injectorInput.period);
+    Serial.println(duty);
+    Serial.print("Saida consumo: ");
     Serial.println(out_freq[0]);
     Serial.print(F("Consumo: "));
     Serial.print(consumption);

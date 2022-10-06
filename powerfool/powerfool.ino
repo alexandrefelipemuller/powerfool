@@ -1,5 +1,8 @@
 #include <EEPROM.h>
 #include "menu.h"
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
 #define timer_freq 3000
 
 #define speed_in_pin 2 // j8, verde
@@ -20,6 +23,8 @@
 
 const float injetor = 23; // vazao do injetor a 12v, em lbs/h
 
+LiquidCrystal_I2C lcd(0x27,16,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
 // set up pulse pins
 #define n_saidas_pulso 3
 float out_freq[n_saidas_pulso] = {1,1,1};
@@ -30,8 +35,7 @@ int correction_drift[n_saidas_pulso] = {0,0,0};
 
 bool diagnostic_mode = false;
 
-unsigned long last_millis;
-unsigned long totalMileage, tripA;
+unsigned long last_millis, totalMileage, tripA;
 unsigned int rpmBeep, rpmAlert, minPressure, speedSensor, settings;
 unsigned char speedLimit, doorLockspd;
 bool doorLocked = false, speedBeep = false;
@@ -71,11 +75,27 @@ void setup()
   
   loadMemoryValues();
   
-  setupTimer1();
+  setupTimer1(); 
+
+  lcd.init();
+  lcd.backlight();  
+}
+
+
+void displayReport(int rpm, float volts, int sensorPressure){
+    lcd.setCursor(0,0);
+    lcd.print(F("Bateria: "));
+    lcd.print(volts);
+    lcd.print(F(" v "));
+    lcd.setCursor(0,1);
+    lcd.print(F("Pressao: "));
+    lcd.print(float(sensorPressure/1000.0f));
+    lcd.print(F("bar"));
 }
 
 void loop()
 {
+ 
   if (Serial.available() > 0)
     Menu();
 
@@ -123,6 +143,8 @@ void loop()
     diagnosticReport(injectorInput, speedInput, consumption, volts, sensorPressureVal);
     delay(100);
   }
+
+  displayReport(rpm, volts, sensorPressureVal);
   delay(100);
 }
 
@@ -227,7 +249,6 @@ void setOutFrequency(float baseFreq, int num){
     previousTime[num] = micros(); 
     baseFreq=0.0;
   }
-  
   float drift=0;
   if (correction_drift[num] > 0)
     drift=(float) (correction_drift[num]/8191.75f)+1.0f;

@@ -17,6 +17,9 @@
 * 18 = Settings binary array (2 bytes)
 *     0 - speed beep type
 *     1 - injection sequential/semi
+* 21 - IAT sensor (2 bytes)
+* 23 - Lambda sensor (2 bytes)
+* 25 - Wastegate adjust (2 bytes)
 */
 void(* resetFunc) (void) = 0;
 
@@ -174,7 +177,7 @@ float memValueToCorrection(int value){
   else
     return float (value/327.67f);
 }
-void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consumption, float volts, int sensorPressureVal){
+void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float volts, int sensorPressureVal){
     Serial.print(F("Entrada velocidade: "));
     Serial.println(speedInput.freq);
     Serial.print(F("Saida velocidade: "));
@@ -192,15 +195,6 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print(injectorInput.freq);
     Serial.print("Hz, (%)");
     float duty = (float)injectorInput.offtime/(float)(injectorInput.period);
-    Serial.println(duty);
-    Serial.print("Saida consumo: ");
-    Serial.println(out_freq[0]);
-    Serial.print(F("Consumo: "));
-    Serial.print(consumption);
-    Serial.println(F(" ml/s"));
-    Serial.print(F("Consumo Instantaneo: "));
-    Serial.print((out_freq[1]/((float) (speedSensor/1000.0f)))/consumption);
-    Serial.println(F(" km/l"));
     Serial.print(F("Tensao bateria: "));
     Serial.print(volts);
     Serial.println(F(" v"));
@@ -247,8 +241,10 @@ void subMenu_a(){
     Serial.println(F("Select one of the following options:"));
     Serial.println(F("1 Leitura sensor de velocidade"));
     Serial.println(F("2 Saida sensor de velocidade"));
-    Serial.println(F("3 Saida sinal de consumo"));
-        Serial.print(F("5 Mudar leitura tipo injeção:"));    
+    Serial.println(F("3 Saida sensor de temperatura do ar"));
+    Serial.println(F("4 Saida sensor de sonda lambda"));
+    Serial.println(F("5 Saida sensor wastegate"));
+        Serial.print(F("6 Mudar leitura tipo injeção:"));    
     if (settings & 2 == 0)
       Serial.println(F(" (semisequencial)")); 
     else
@@ -259,8 +255,10 @@ void subMenu_a(){
         switch (Serial.read()) {
             case '1':  subMenu_num(14,false,typev); break;
             case '2':  subMenu_num(2,true,typev); break;
-            case '3':  subMenu_num(0,true,typev); break;
-            case '4':  settingsChange(1); break;
+            case '3':  subMenu_num(21,true,typev); break;
+            case '4':  subMenu_num(23,true,typev); break;
+            case '5':  subMenu_num(25,true,typev); break;
+            case '6':  settingsChange(1); break;
             case 27: return;
             default: continue;  // includes the case 'no input'
         }

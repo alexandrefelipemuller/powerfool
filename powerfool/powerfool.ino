@@ -1,5 +1,6 @@
 #include <EEPROM.h>
 #include "menu.h"
+#include "display.h"
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 
@@ -9,7 +10,7 @@
 #define speed_out_pin 3 // j5, vermelho/laranja
 #define wasteGateOut 4
 #define intakeAirTempOut 5
-#define wideBandOut 6
+#define menuButton 6
 #define relayOut 10 // j11
 #define consume_pin 11 // j4, branco/cinza
 #define injector_pin 12 // j3, roxo
@@ -67,7 +68,8 @@ void setup()
   pinMode(speed_out_pin,OUTPUT);
   pinMode(wasteGateOut,OUTPUT);
   pinMode(intakeAirTempOut,OUTPUT);
-  pinMode(wideBandOut,OUTPUT);
+  pinMode(menuButton,INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, CHANGE);
   
   pulse_pin[0]=consume_pin;
   pulse_pin[1]=speed_out_pin;
@@ -81,17 +83,6 @@ void setup()
   lcd.backlight();  
 }
 
-
-void displayReport(int rpm, float volts, int sensorPressure){
-    lcd.setCursor(0,0);
-    lcd.print(F("Bateria: "));
-    lcd.print(volts);
-    lcd.print(F(" v "));
-    lcd.setCursor(0,1);
-    lcd.print(F("Pressao: "));
-    lcd.print(float(sensorPressure/1000.0f));
-    lcd.print(F("bar"));
-}
 
 void loop()
 {
@@ -144,7 +135,7 @@ void loop()
     delay(100);
   }
 
-  displayReport(rpm, volts, sensorPressureVal);
+  refreshMenu(rpm, volts, sensorPressureVal, consumption);
   delay(100);
 }
 

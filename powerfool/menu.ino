@@ -185,8 +185,6 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float volts
     
     Serial.print(F("Distancia total (km): "));
     Serial.println(totalMileage/1000);
-    Serial.print(F("Odometro trip A (m): "));
-    Serial.println(tripA);
  
     Serial.print(F("Velocidade: "));
     Serial.print(out_freq[1]/((float) (speedSensor/3600.0f)));

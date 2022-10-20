@@ -1,7 +1,9 @@
 #include <EEPROM.h>
 #include "menu.h"
+#include "bluetooth.h"
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
+#include <SoftwareSerial.h>
 
 #define timer_freq 3000
 
@@ -21,36 +23,30 @@
 #define sensorPressure2 A7
 
 LiquidCrystal_I2C lcd(0x27,16,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+SoftwareSerial BTSerial (8,9);
 
 // set up pulse pins
-#define n_saidas_pulso 3
-float out_freq[n_saidas_pulso] = {1,1,1};
-unsigned long previousTime[n_saidas_pulso] = {0,0,0};
+#define n_saidas_pulso 1
+float out_freq[n_saidas_pulso] = {1};
+unsigned long previousTime[n_saidas_pulso] = {0};
 //Define pinos para pulsar, devem ser iniciador em setup
-int pulse_pin[n_saidas_pulso] = {-1,-1,-1}; 
-int correction_drift[n_saidas_pulso] = {0,0,0}; 
+int pulse_pin[n_saidas_pulso] = {-1}; 
+int correction_drift[n_saidas_pulso] = {0}; 
 
 bool diagnostic_mode = false;
 
-unsigned long last_millis, totalMileage, tripA;
+unsigned long last_millis, totalMileage;
 unsigned int rpmBeep, rpmAlert, minPressure, speedSensor, settings;
 int iatAdjust, wideAdjust, wasteGateAdjust;
 unsigned char speedLimit;
 bool doorLocked = false, speedBeep = false;
-
-struct inputFreq{
-  unsigned long ontime;
-  unsigned long offtime;
-  unsigned long period;
-  float freq;
-};
-typedef struct inputFreq inputFreq;
 
 float odometer = 0;
 
 void setup()
 {
   Serial.begin(9600);
+  BTSerial.begin(9600);
   pinMode(injector_pin,INPUT);
   pinMode(speed_in_pin,INPUT);
   pinMode(voltageIn, INPUT);
@@ -66,8 +62,7 @@ void setup()
   pinMode(intakeAirTempOut,OUTPUT);
   pinMode(wideBandOut,OUTPUT);
   
-  pulse_pin[1]=speed_out_pin;
-  pulse_pin[2]=beep;
+  pulse_pin[0]=beep;
   
   loadMemoryValues();
   
@@ -104,7 +99,6 @@ void loop()
   unsigned long elapsedtime = millis() - last_millis;
   odometer += (elapsedtime*out_freq[1])/((float) speedSensor); //meters
   if (odometer > 500.0){
-    tripA += odometer;
     totalMileage += odometer;
     odometer = 0.0;
     EEPROM.put(4, totalMileage);
@@ -119,8 +113,7 @@ void loop()
   int rpm = injectorInput.freq*60*((settings & 2 == 0)*2);
   int sensorPressureVal = alertsManager(rpm);
 
-  //Piggyback
-
+  /* Piggyback */
   int input = analogRead(wideBandSensor);
   float drift = getDrift(wideAdjust);
   input = input*drift;
@@ -144,6 +137,7 @@ void loop()
   }
 
   displayReport(rpm, volts, sensorPressureVal);
+  sendBluetooth(injectorInput, speedInput, volts, sensorPressureVal);
   delay(100);
 }
 
@@ -213,7 +207,7 @@ int alertsManager(int rpm){
   int sensorPressureVal = map(analogRead(A2), 204, 1024, 0, 10000);
   if (rpmAlert > 0 && rpm > rpmAlert && sensorPressureVal < minPressure){
     digitalWrite(relayOut,HIGH);
-    setOutFrequency(3,2);
+    setOutFrequency(3,0);
   }
   /*int sensorPressureVal2 = map(analogRead(A7), 204, 1024, 0, 10000);
   if (rpmAlert > 0 && rpm > rpmAlert && sensorPressureVal2 < minPressure){

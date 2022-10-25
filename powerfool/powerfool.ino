@@ -1,8 +1,17 @@
+#define BUILD_DISPLAY
+//#define BUILD_BLUETOOTH
+
 #include <EEPROM.h>
-#include "menu.h"
+#include "menu.h" 
+//DISPLAY
 #include "display.h"
-#include <Wire.h> 
+#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+//BLUETOOTH
+//#include "bluetooth.h"
+//#include <SoftwareSerial.h>
+//SoftwareSerial BTSerial (8,9);
 
 #define timer_freq 3000
 
@@ -22,9 +31,7 @@
 #define wasteGate A6
 #define sensorPressure2 A7 // marrom
 
-const float injetor = 23; // vazao do injetor a 12v, em lbs/h
-
-LiquidCrystal_I2C lcd(0x27,16,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+#define injetor 23 // vazao do injetor a 12v, em lbs/h
 
 // set up pulse pins
 #define n_saidas_pulso 3
@@ -37,17 +44,9 @@ int correction_drift[n_saidas_pulso] = {0,0,0};
 bool diagnostic_mode = false;
 
 unsigned long last_millis, totalMileage, tripA;
-unsigned int rpmBeep, rpmAlert, minPressure, speedSensor, settings;
+unsigned int rpmLimit, rpmAlert, minPressure, speedSensor, settings;
 unsigned char speedLimit, doorLockspd;
-bool doorLocked = false, speedBeep = false;
-
-struct inputFreq{
-  unsigned long ontime;
-  unsigned long offtime;
-  unsigned long period;
-  float freq;
-};
-typedef struct inputFreq inputFreq;
+bool doorLocked = false, speedBeep = false, rpmBeep = false;
 
 float odometer = 0;
 
@@ -69,7 +68,7 @@ void setup()
   pinMode(wasteGateOut,OUTPUT);
   pinMode(intakeAirTempOut,OUTPUT);
   pinMode(menuButton,INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, CHANGE);
+  //attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, CHANGE);
   
   pulse_pin[0]=consume_pin;
   pulse_pin[1]=speed_out_pin;
@@ -79,30 +78,42 @@ void setup()
   
   setupTimer1(); 
 
-  lcd.init();
-  lcd.backlight();  
+  #ifdef BUILD_DISPLAY
+    lcd.init();
+    lcd.backlight(); 
+  #endif
+  #ifdef BUILD_BLUETOOTH
+    BTSerial.begin(9600);
+  #endif
 }
 
 
 void loop()
 {
- 
   if (Serial.available() > 0)
     Menu();
-
+  #ifdef BUILD_DISPLAY
+  if (digitalRead(menuButton) == LOW)
+    changeMenu();
+  #endif
+    
   float volts = analogRead(voltageIn)*0.0197f;
   
   inputFreq injectorInput, speedInput;
   readFrequency(injector_pin, &injectorInput);
-  float duty = (float)injectorInput.offtime/(float)(injectorInput.period); 
+  float duty;
+  if ((float)(injectorInput.period) == 0.0f)
+    duty=0.0;
+  else
+    duty = (float)injectorInput.offtime/(float)(injectorInput.period); 
+   
   float vazao = injetor * (0.126); // result in ml/s 
   float consumption = injectorInput.freq*vazao*duty;
-   
-  // 0.083 Renault empirical constant
+  
   if (injectorInput.period == 0.0)
     setOutFrequency(0.0,0);  
   else
-    setOutFrequency(consumption/0.083f,0); 
+    setOutFrequency(consumption,0); 
   
   readFrequency(speed_in_pin, &speedInput);
   if (speedInput.period == 0.0)
@@ -132,11 +143,15 @@ void loop()
   if (diagnostic_mode){
     clearScreen();
     diagnosticReport(injectorInput, speedInput, consumption, volts, sensorPressureVal);
-    delay(100);
+    delay(200);
   }
-
-  refreshMenu(rpm, volts, sensorPressureVal, consumption);
-  delay(100);
+  #ifdef BUILD_DISPLAY
+    refreshMenu(injectorInput, speedInput, consumption, volts, sensorPressureVal);
+  #endif
+  #ifdef BUILD_BLUETOOTH
+    sendBluetooth(injectorInput, speedInput, volts, sensorPressureVal);
+  #endif
+  delay(10);
 }
 
 void setupTimer1(){
@@ -165,7 +180,7 @@ void loadMemoryValues(){
   EEPROM.get(0,correction_drift[0]);
   EEPROM.get(2,correction_drift[1]);
   EEPROM.get(4,totalMileage);
-  EEPROM.get(8,rpmBeep);
+  EEPROM.get(8,rpmLimit);
   EEPROM.get(10,rpmAlert);
   EEPROM.get(12,minPressure);
   EEPROM.get(14,speedSensor);
@@ -181,28 +196,41 @@ void speedManager(int currentSpeed){
     digitalWrite(relayOut,LOW);
     doorLocked=true;
   }
-  if (speedLimit > 0 && currentSpeed > speedLimit){
-      if (settings % 2 == 0)
-        digitalWrite(beep,HIGH);
-      else{
-        if (!speedBeep)
-         digitalWrite(beep,HIGH);
-        delay(50);
-        digitalWrite(beep,LOW);
+  if (speedLimit > 0){
+    if (currentSpeed > speedLimit){
+        if (settings % 2 == 0) //continuo ou curto
+          digitalWrite(beep,HIGH);
+        else{
+          if (!speedBeep){
+          digitalWrite(beep,HIGH);
+          delay(80);
+          digitalWrite(beep,LOW);
+          delay(80);
+          digitalWrite(beep,HIGH);
+          delay(80);
+          digitalWrite(beep,LOW);
+          }
+        }
         speedBeep=true;
-      }
-  }
-  else{
-    digitalWrite(beep,LOW);
-    speedBeep=false;
+    }
+    else{
+      digitalWrite(beep,LOW);
+      speedBeep=false;
+    }
   }
 }
 
 int alertsManager(int rpm){
-  if (rpmBeep > 0 && (rpm > rpmBeep)){
-    digitalWrite(beep,HIGH);
-  }else{
-    digitalWrite(beep,LOW);
+  if (rpmLimit > 0){
+    if (rpm > rpmLimit){
+      digitalWrite(beep,HIGH);
+      rpmBeep=true;
+    }else{
+      if (rpmBeep){
+        digitalWrite(beep,LOW);
+        rpmBeep=false;
+      }  
+    }
   }
   int sensorPressureVal = map(analogRead(A2), 204, 1024, 0, 10000);
   if (rpmAlert > 0 && rpm > rpmAlert && sensorPressureVal < minPressure){

@@ -17,6 +17,9 @@
 * 18 = Settings binary array (2 bytes)
 *     0 - speed beep type
 *     1 - injection sequential/semi
+*     
+*     
+* 20 = fuel tank (1 byte)
 */
 void(* resetFunc) (void) = 0;
 
@@ -119,13 +122,15 @@ void subMenu_num(int position, bool isPercent, varType t){
               	numberEntry(value,position,isPercent);
               	break;
             case 'a': 
+            case 'A': 
                 if (value >= upperLimit-(step*10))
                   value = upperLimit-(step*10);
                 else
                   value+=(step*10);
          			numberEntry(value,position,isPercent);
          			break;
-            case 'd': 
+            case 'd':
+            case 'D':  
                 if (value <= lowerLimit+(step*10))
                   value = lowerLimit+(step*10);
                 else
@@ -133,6 +138,7 @@ void subMenu_num(int position, bool isPercent, varType t){
          			numberEntry(value,position,isPercent);
          			break;
             case 's': 
+            case 'S': 
                 Serial.println("Salvando valor...");
                 if (isPercent){
                   Serial.println(memValueToCorrection(value));
@@ -246,7 +252,7 @@ void subMenu_a(){
     printBannerMsg("Ajustes");
     Serial.println(F("Select one of the following options:"));
     Serial.println(F("1 Leitura sensor de velocidade"));
-    Serial.println(F("2 Saida sensor de velocidade"));
+    Serial.println(F("2 Saida sinal de velocidade"));
     Serial.println(F("3 Saida sinal de consumo"));
         Serial.print(F("5 Mudar leitura tipo injeção:"));    
     if (settings & 2 == 0)

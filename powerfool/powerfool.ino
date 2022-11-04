@@ -1,4 +1,4 @@
-#define BUILD_DISPLAY
+//#define BUILD_DISPLAY
 //#define BUILD_BLUETOOTH
 
 #include <EEPROM.h>
@@ -18,7 +18,7 @@ LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars
 #define speed_in_pin 2 // j8, verde
 #define speed_out_pin 3 // j5, vermelho/laranja
 #define wasteGateOut 4
-#define intakeAirTempOut 5
+#define setButton 5
 #define menuButton 6
 #define relayOut 10 // j11
 #define consume_pin 11 // j4, branco/cinza
@@ -44,17 +44,17 @@ int correction_drift[n_saidas_pulso] = {0,0,0};
 bool diagnostic_mode = false;
 
 unsigned long last_millis, totalMileage, tripA;
-unsigned int rpmLimit, rpmAlert, minPressure, speedSensor, settings;
+unsigned int rpmLimit, rpmAlert, minPressure, speedSensor, settings, tank;
 unsigned char speedLimit, doorLockspd;
 bool doorLocked = false, speedBeep = false, rpmBeep = false;
 
-float odometer = 0;
+float odometer, fuel = 0;
 
 void setup()
 {
   Serial.begin(9600);
   pinMode(injector_pin,INPUT);
-  pinMode(speed_in_pin,INPUT);
+  pinMode(speed_in_pin,INPUT_PULLUP);
   pinMode(voltageIn, INPUT);
   pinMode(sensorPressure,INPUT);
   pinMode(wideBandSensor,INPUT);
@@ -66,7 +66,7 @@ void setup()
   pinMode(consume_pin,OUTPUT);
   pinMode(speed_out_pin,OUTPUT);
   pinMode(wasteGateOut,OUTPUT);
-  pinMode(intakeAirTempOut,OUTPUT);
+  pinMode(setButton,INPUT_PULLUP);
   pinMode(menuButton,INPUT_PULLUP);
   //attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, CHANGE);
   
@@ -92,7 +92,11 @@ void loop()
 {
   if (Serial.available() > 0)
     Menu();
+  
   #ifdef BUILD_DISPLAY
+  if (digitalRead(setButton) == LOW)
+    setMenu();
+
   if (digitalRead(menuButton) == LOW)
     changeMenu();
   #endif
@@ -124,11 +128,15 @@ void loop()
   //Calculate distance
   unsigned long elapsedtime = millis() - last_millis;
   odometer += (elapsedtime*out_freq[1])/((float) speedSensor); //meters
+  fuel += (out_freq[0]/1000)*elapsedtime;
   if (odometer > 500.0){
+    tank-=fuel;
+    fuel=0.0;
     tripA += odometer;
     totalMileage += odometer;
     odometer = 0.0;
     EEPROM.put(4, totalMileage);
+    EEPROM.put(20, tank);
   }
   last_millis = millis();
 
@@ -175,6 +183,7 @@ void loadMemoryValues(){
     EEPROM.put(16,(char)0);
     EEPROM.put(17,(char)0);
     EEPROM.put(18,(int)0);
+    EEPROM.put(20,(int)20000);
   } 
   //Load values
   EEPROM.get(0,correction_drift[0]);
@@ -187,6 +196,7 @@ void loadMemoryValues(){
   EEPROM.get(16,speedLimit);
   EEPROM.get(17,doorLockspd);
   EEPROM.get(18,settings);
+  EEPROM.get(20,tank);
 }
 
 void speedManager(int currentSpeed){
@@ -245,8 +255,8 @@ int alertsManager(int rpm){
   return sensorPressureVal;
 }
 
-void readFrequency(int pin, inputFreq *returnedValues){
-  (*returnedValues).ontime = pulseInLong(pin,HIGH,200000);
+void readFrequency(int pin, inputFreq *returnedValues){ 
+  (*returnedValues).ontime = pulseInLong(pin,HIGH,200000); 
   if ((*returnedValues).ontime == 0){
      (*returnedValues).offtime = 0.0; 
      (*returnedValues).period = 0.0;

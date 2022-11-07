@@ -31,7 +31,7 @@ LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars
 #define wasteGate A6
 #define sensorPressure2 A7 // marrom
 
-#define injetor 23 // vazao do injetor a 12v, em lbs/h
+#define injetor 20.0 // vazao do injetor a 12v, em lbs/h
 
 // set up pulse pins
 #define n_saidas_pulso 3
@@ -87,6 +87,35 @@ void setup()
   #endif
 }
 
+void loadMemoryValues(){
+    if (EEPROM.read(0) == 255){
+    //First boot, clear memory
+    EEPROM.put(0,(int)0);
+    EEPROM.put(2,(int)0);
+    EEPROM.put(4,(long)0);
+    EEPROM.put(8,(int)0);
+    EEPROM.put(10,(int)0);
+    EEPROM.put(12,(int)0);
+    EEPROM.put(14,(int)4860);
+    EEPROM.put(16,(char)0);
+    EEPROM.put(17,(char)0);
+    EEPROM.put(18,(int)0);
+    EEPROM.put(20,(int)20000);
+  } 
+  //Load values
+  EEPROM.get(0,correction_drift[0]);
+  EEPROM.get(2,correction_drift[1]);
+  EEPROM.get(4,totalMileage);
+  EEPROM.get(8,rpmLimit);
+  EEPROM.get(10,rpmAlert);
+  EEPROM.get(12,minPressure);
+  EEPROM.get(14,speedSensor);
+  EEPROM.get(16,speedLimit);
+  EEPROM.get(17,doorLockspd);
+  EEPROM.get(18,settings);
+  EEPROM.get(20,tank);
+}
+
 
 void loop()
 {
@@ -117,7 +146,7 @@ void loop()
   if (injectorInput.period == 0.0)
     setOutFrequency(0.0,0);  
   else
-    setOutFrequency(consumption,0); 
+    setOutFrequency(consumption/0.083f,0); 
   
   readFrequency(speed_in_pin, &speedInput);
   if (speedInput.period == 0.0)
@@ -145,7 +174,7 @@ void loop()
   speedManager(currentSpeed);
   
   /* Alerts */
-  int rpm = injectorInput.freq*60*((settings & 2 == 0)*2);
+  int rpm = injectorInput.freq*60*(((settings & 2 == 0)+1)*2);
   int sensorPressureVal = alertsManager(rpm);
 
   if (diagnostic_mode){
@@ -168,35 +197,6 @@ void setupTimer1(){
   TCCR1B |= (1<<CS10)|(1 << CS12);   // configura prescaler para 1024: CS12 = 1 e CS10 = 1
   TCNT1 = 65536-(16000000/1024/timer_freq); //configura timer
   TIMSK1 |= (1 << TOIE1);           // habilita a interrupção do TIMER1
-}
-
-void loadMemoryValues(){
-    if (EEPROM.read(0) == 255){
-    //First boot, clear memory
-    EEPROM.put(0,(int)0);
-    EEPROM.put(2,(int)0);
-    EEPROM.put(4,(long)0);
-    EEPROM.put(8,(int)0);
-    EEPROM.put(10,(int)0);
-    EEPROM.put(12,(int)0);
-    EEPROM.put(14,(int)4860);
-    EEPROM.put(16,(char)0);
-    EEPROM.put(17,(char)0);
-    EEPROM.put(18,(int)0);
-    EEPROM.put(20,(int)20000);
-  } 
-  //Load values
-  EEPROM.get(0,correction_drift[0]);
-  EEPROM.get(2,correction_drift[1]);
-  EEPROM.get(4,totalMileage);
-  EEPROM.get(8,rpmLimit);
-  EEPROM.get(10,rpmAlert);
-  EEPROM.get(12,minPressure);
-  EEPROM.get(14,speedSensor);
-  EEPROM.get(16,speedLimit);
-  EEPROM.get(17,doorLockspd);
-  EEPROM.get(18,settings);
-  EEPROM.get(20,tank);
 }
 
 void speedManager(int currentSpeed){
@@ -283,7 +283,9 @@ void setOutFrequency(float baseFreq, int num){
     drift=(float) (correction_drift[num]/8191.75f)+1.0f;
   else
     drift=(float) (correction_drift[num]+32767)/32767.0f;
-  out_freq[num]=(baseFreq*drift);
+
+  //out_freq[num]=(baseFreq*drift);
+  out_freq[num]=(out_freq[num]+(baseFreq*drift))/2; //Use median to Smooth the signal
 }
 
 

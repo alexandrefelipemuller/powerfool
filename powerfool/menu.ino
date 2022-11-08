@@ -142,7 +142,6 @@ void subMenu_num(int position, bool isPercent, varType t){
                 Serial.println("Salvando valor...");
                 if (isPercent){
                   Serial.println(memValueToCorrection(value));
-                  correction_drift[position/2] = value;
                 }else{
                   Serial.println(value);
                 }

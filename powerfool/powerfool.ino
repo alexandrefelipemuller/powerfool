@@ -154,19 +154,8 @@ void loop()
   else
     setOutFrequency(speedInput.freq,1);
    
-  //Calculate distance
-  unsigned long elapsedtime = millis() - last_millis;
-  odometer += (elapsedtime*out_freq[1])/((float) speedSensor); //meters
-  fuel += (out_freq[0]/1000)*elapsedtime;
-  if (odometer > 500.0){
-    tank-=fuel;
-    fuel=0.0;
-    tripA += odometer;
-    totalMileage += odometer;
-    odometer = 0.0;
-    EEPROM.put(4, totalMileage);
-    EEPROM.put(20, tank);
-  }
+  //Calculate distance and consumed fuel
+  calculateDistante(millis() - last_millis);
   last_millis = millis();
 
   //Speed
@@ -189,6 +178,19 @@ void loop()
     sendBluetooth(injectorInput, speedInput, volts, sensorPressureVal);
   #endif
   delay(10);
+}
+void calculateDistante(unsigned long elapsedtime){
+  odometer += (elapsedtime*out_freq[1])/((float) speedSensor); //meters
+  fuel += (out_freq[0]/1000)*elapsedtime;
+  if (odometer > 500.0){
+    tank-=fuel;
+    fuel=0.0;
+    tripA += odometer;
+    totalMileage += odometer;
+    odometer = 0.0;
+    EEPROM.put(4, totalMileage);
+    EEPROM.put(20, tank);
+  }
 }
 
 void setupTimer1(){

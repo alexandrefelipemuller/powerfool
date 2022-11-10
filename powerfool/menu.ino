@@ -164,7 +164,6 @@ void numberEntry(int value, int position, bool isPercent){
   Serial.print(F("Novo valor: "));
   if (isPercent){
      Serial.print(memValueToCorrection(value));
-     correction_drift[position/2] = value;
      Serial.print(F("% de correcao"));
   }
   else{
@@ -180,11 +179,11 @@ float memValueToCorrection(int value){
     return float (value/327.67f);
 }
 void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consumption, float volts, int sensorPressureVal){
-    Serial.print(F("Entrada velocidade: "));
+    /*Serial.print(F("Entrada velocidade: "));
     Serial.println(speedInput.freq);
     Serial.print(F("Saida velocidade: "));
     Serial.println(out_freq[1]);
-    
+    */
     Serial.print(F("Distancia total (km): "));
     Serial.println(totalMileage/1000);
     Serial.print(F("Odometro trip A (m): "));
@@ -203,16 +202,16 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print(F("Consumo: "));
     Serial.print(consumption);
     Serial.println(F(" ml/s"));
-    Serial.print(F("Consumo Instantaneo: "));
+    /*Serial.print(F("Consumo Instantaneo: "));
     Serial.print((out_freq[1]/((float) (speedSensor/1000.0f)))/consumption);
-    Serial.println(F(" km/l"));
+    Serial.println(F(" km/l"));*/
     Serial.print(F("Tensao bateria: "));
     Serial.print(volts);
     Serial.println(F(" v"));
     Serial.print(F("RPM: "));
     Serial.println((int)(injectorInput.freq * 60 *((settings & 2 == 0)+1)*2)); // semi, sequential
-    Serial.print(F("Pressao sensor: "));
-    Serial.println((int)sensorPressureVal);
+    //Serial.print(F("Pressao sensor: "));
+    //Serial.println((int)sensorPressureVal);
     Serial.println(F("Pressione ESC para sair"));
     if (Serial.read() == 27)
       diagnostic_mode = false;
@@ -229,7 +228,7 @@ void subMenu_e(){
       Serial.println(F(" (continuo)")); 
     else
       Serial.println(F(" (curto)")); 
-    Serial.println(F("6 Travamento automatico de portas km/h"));
+    //Serial.println(F("6 Travamento automatico de portas km/h"));
     Serial.println(F("ESC Voltar"));
     varType typev = INT;
     for (;;) {
@@ -239,7 +238,7 @@ void subMenu_e(){
             case '3': subMenu_num(12,false,typev); break;
             case '4': typev = UCHAR; subMenu_num(16,false,typev); break;
             case '5': settingsChange(0); break;
-            case '6': typev = UCHAR; subMenu_num(17,false,typev); break;
+            //case '6': typev = UCHAR; subMenu_num(17,false,typev); break;
             case 27: return;
             default: continue;  // includes the case 'no input'
         }

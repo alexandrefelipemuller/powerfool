@@ -1,4 +1,4 @@
-//#define BUILD_DISPLAY
+#define BUILD_DISPLAY
 //#define BUILD_BLUETOOTH
 
 #include <EEPROM.h>
@@ -32,6 +32,7 @@ LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars
 #define sensorPressure2 A7 // marrom
 
 #define injetor 20.0 // vazao do injetor a 12v, em lbs/h
+#define samples 4
 
 // set up pulse pins
 #define n_saidas_pulso 3
@@ -44,11 +45,14 @@ int correction_drift[n_saidas_pulso] = {0,0,0};
 bool diagnostic_mode = false;
 
 unsigned long last_millis, totalMileage, tripA;
-unsigned int rpmLimit, rpmAlert, minPressure, speedSensor, settings, tank;
-unsigned char speedLimit, doorLockspd;
+unsigned int rpmLimit, rpmAlert, minPressure, speedSensor, settings;
+//unsigned int tank;
+unsigned char speedLimit;
+//unsigned char doorLockspd;
 bool doorLocked = false, speedBeep = false, rpmBeep = false;
 
-float odometer, fuel = 0;
+float odometer = 0;
+//float fuel = 0;
 
 void setup()
 {
@@ -98,7 +102,7 @@ void loadMemoryValues(){
     EEPROM.put(12,(int)0);
     EEPROM.put(14,(int)4860);
     EEPROM.put(16,(char)0);
-    EEPROM.put(17,(char)0);
+    //EEPROM.put(17,(char)0);
     EEPROM.put(18,(int)0);
     EEPROM.put(20,(int)20000);
   } 
@@ -111,11 +115,18 @@ void loadMemoryValues(){
   EEPROM.get(12,minPressure);
   EEPROM.get(14,speedSensor);
   EEPROM.get(16,speedLimit);
-  EEPROM.get(17,doorLockspd);
+  //EEPROM.get(17,doorLockspd);
   EEPROM.get(18,settings);
-  EEPROM.get(20,tank);
+  //EEPROM.get(20,tank);
 }
 
+void setupTimer1(){
+  TCCR1A = 0;                        //confira timer para operação normal pinos OC1A e OC1B desconectados
+  TCCR1B = 0;                        //limpa registrador
+  TCCR1B |= (1<<CS10)|(1 << CS12);   // configura prescaler para 1024: CS12 = 1 e CS10 = 1
+  TCNT1 = 65536-(16000000/1024/timer_freq); //configura timer
+  TIMSK1 |= (1 << TOIE1);           // habilita a interrupção do TIMER1
+}
 
 void loop()
 {
@@ -177,37 +188,29 @@ void loop()
   #ifdef BUILD_BLUETOOTH
     sendBluetooth(injectorInput, speedInput, volts, sensorPressureVal);
   #endif
-  delay(10);
+  delay(5);
 }
 void calculateDistante(unsigned long elapsedtime){
   odometer += (elapsedtime*out_freq[1])/((float) speedSensor); //meters
-  fuel += (out_freq[0]/1000)*elapsedtime;
+  //fuel += (out_freq[0]/1000)*elapsedtime;
   if (odometer > 500.0){
-    tank-=fuel;
-    fuel=0.0;
+    //tank-=fuel;
+    //fuel=0.0;
     tripA += odometer;
     totalMileage += odometer;
     odometer = 0.0;
     EEPROM.put(4, totalMileage);
-    EEPROM.put(20, tank);
+    //EEPROM.put(20, tank);
   }
 }
 
-void setupTimer1(){
-  TCCR1A = 0;                        //confira timer para operação normal pinos OC1A e OC1B desconectados
-  TCCR1B = 0;                        //limpa registrador
-  TCCR1B |= (1<<CS10)|(1 << CS12);   // configura prescaler para 1024: CS12 = 1 e CS10 = 1
-  TCNT1 = 65536-(16000000/1024/timer_freq); //configura timer
-  TIMSK1 |= (1 << TOIE1);           // habilita a interrupção do TIMER1
-}
-
 void speedManager(int currentSpeed){
-    if (doorLockspd > 0 && !doorLocked && currentSpeed > doorLockspd){
+   /* if (doorLockspd > 0 && !doorLocked && currentSpeed > doorLockspd){
     digitalWrite(relayOut,HIGH);
     delay(300);
     digitalWrite(relayOut,LOW);
     doorLocked=true;
-  }
+  }*/
   if (speedLimit > 0){
     if (currentSpeed > speedLimit){
         if (settings % 2 == 0) //continuo ou curto
@@ -249,25 +252,25 @@ int alertsManager(int rpm){
     digitalWrite(relayOut,HIGH);
     setOutFrequency(3,2);
   }
-  /*int sensorPressureVal2 = map(analogRead(A7), 204, 1024, 0, 10000);
-  if (rpmAlert > 0 && rpm > rpmAlert && sensorPressureVal2 < minPressure){
-    digitalWrite(relayOut,HIGH);
-    setOutFrequency(3,2);
-  }*/
   return sensorPressureVal;
 }
 
 void readFrequency(int pin, inputFreq *returnedValues){ 
-  (*returnedValues).ontime = pulseInLong(pin,HIGH,200000); 
-  if ((*returnedValues).ontime == 0){
-     (*returnedValues).offtime = 0.0; 
-     (*returnedValues).period = 0.0;
-     (*returnedValues).freq = 0.0;
-  } else{
-    (*returnedValues).offtime = pulseInLong(pin,LOW,200000); 
-    (*returnedValues).period = ((*returnedValues).ontime+(*returnedValues).offtime);
-    (*returnedValues).freq = (1000000.0f/(*returnedValues).period);    
+  for (int i=0;i < samples; i++){
+    unsigned long ontime = pulseInLong(pin,HIGH,200000);
+    if (ontime == 0){
+      (*returnedValues).offtime = 0.0; 
+      (*returnedValues).period = 0.0;
+      (*returnedValues).freq = 0.0;
+      return;
+    }
+    (*returnedValues).ontime += ontime;
+    (*returnedValues).offtime += pulseInLong(pin,LOW,170000);
   }
+  (*returnedValues).offtime = (*returnedValues).offtime/samples;
+  (*returnedValues).ontime = (*returnedValues).ontime/samples;
+  (*returnedValues).period = ((*returnedValues).ontime+(*returnedValues).offtime);
+  (*returnedValues).freq = (1000000.0f/(*returnedValues).period);    
 }
 
 //Setup the frequency to output

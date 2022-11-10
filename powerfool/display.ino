@@ -4,7 +4,7 @@ void changeMenu() {
 }
 
 void setMenu() {
-   switch (currentMenu)
+  switch (currentMenu)
   {
     case 0:
       tripA=0;
@@ -16,10 +16,10 @@ void setMenu() {
         bestLap=lastLap;
       startLap=millis();
       break;
-    case 5:
+    /*case 5:
       if (tank > 60000)
         tank=0;
-      tank+=5000;
+      tank+=5000;*/
     default:
       break;
   }
@@ -45,22 +45,27 @@ void menu1(int rpm, float volts, int sensorPressure){
     lcd.print(F("bar"));
 }
 
-void menu2(float out_freq){
+void menu2(float out_freq, float consumption){
     unsigned char cspeed = (int) (out_freq/((float) (speedSensor/3600.0f))); 
     lcd.print(cspeed);
     padNumber(cspeed);
     lcd.print(F("km/h"));
-}
-
-void menu3(float out_freq, float consumption){
+    lcd.setCursor(0,1);
     if (consumption == 0.0f)
       lcd.print(0.0f);
     else
       lcd.print((out_freq/((float) (speedSensor/1000.0f)))/consumption);
     lcd.print(F(" km/l"));
-    lcd.setCursor(0,1);
-    lcd.print((float)(tripA/tank));
-    lcd.print(F(" avg. km/l"));
+}
+
+void menu3(){
+  lcd.print(("sensor1:"));
+  lcd.print((float)(analogRead(A7)/204));
+  lcd.print((" v"));
+  lcd.setCursor(0,1);
+  lcd.print(("sensor2:"));
+  lcd.print((float)(analogRead(A6)/204));
+  lcd.print((" v"));
 }
 
 void menu4(){
@@ -79,14 +84,14 @@ void menu4(){
 }
 
 void menu5(){
-    lcd.print((int)(tank/1000));
+    /*lcd.print((int)(tank/1000));
     lcd.print(".");
     lcd.print((int)(tank%100));
     lcd.print(" l");
     lcd.setCursor(0,1);
     lcd.print("aut. ");
     lcd.print((float)(tank*(tripA/tank)));
-    lcd.print(F(" km"));
+    lcd.print(F(" km"));*/
 }
 
 void printTime(unsigned long lTime){
@@ -118,17 +123,17 @@ void refreshMenu(inputFreq injectorInput, inputFreq speedInput, float consumptio
       menu1(rpm, volts, sensorPressure);
       break;
     case 2:
-     menu2(speedInput.freq);
+     menu2(speedInput.freq, consumption);
       break;
     case 3:
-     menu3(speedInput.freq, consumption);
+     menu3();
       break;
     case 4:
      menu4();
       break;
-    case 5:
+    /*case 5:
      menu5();
-      break;
+      break;*/
     default:
       currentMenu = 0;
       menu0();

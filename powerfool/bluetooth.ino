@@ -1,4 +1,4 @@
-/*
+#ifdef BUILD_BLUETOOTH
 void sendBluetooth(inputFreq injectorInput, inputFreq speedInput, float volts, int sensorPressureVal){
     byte buf[8];
 
@@ -33,4 +33,4 @@ void SendCANFrameToSerial(unsigned long canFrameId, const byte* frameData)
   // CAN frame payload
   BTSerial.write(frameData, 8);
 }
-*/
+#endif

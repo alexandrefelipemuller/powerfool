@@ -16,10 +16,12 @@ void setMenu() {
         bestLap=lastLap;
       startLap=millis();
       break;
-    /*case 5:
+    #ifndef is_ATM168p
+    case 5:
       if (tank > 60000)
         tank=0;
-      tank+=5000;*/
+      tank+=5000;
+    #endif
     default:
       break;
   }
@@ -83,16 +85,18 @@ void menu4(){
     lcd.print(" ");
 }
 
-void menu5(){
-    /*lcd.print((int)(tank/1000));
+#ifndef is_ATM168p
+  void menu5(){
+    lcd.print((int)(tank/1000));
     lcd.print(".");
     lcd.print((int)(tank%100));
     lcd.print(" l");
     lcd.setCursor(0,1);
     lcd.print("aut. ");
     lcd.print((float)(tank*(tripA/tank)));
-    lcd.print(F(" km"));*/
-}
+    lcd.print(F(" km"));
+  }
+#endif
 
 void printTime(unsigned long lTime){
     lcd.print((unsigned int)(lTime/60000));
@@ -131,9 +135,11 @@ void refreshMenu(inputFreq injectorInput, inputFreq speedInput, float consumptio
     case 4:
      menu4();
       break;
-    /*case 5:
-     menu5();
-      break;*/
+     #ifndef is_ATM168p
+      case 5:
+      menu5();
+      break;
+     #endif
     default:
       currentMenu = 0;
       menu0();

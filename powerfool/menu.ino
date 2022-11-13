@@ -179,16 +179,21 @@ float memValueToCorrection(int value){
     return float (value/327.67f);
 }
 void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consumption, float volts, int sensorPressureVal){
-    /*Serial.print(F("Entrada velocidade: "));
+    #ifndef is_ATM168p
+    Serial.print(F("Entrada velocidade: "));
     Serial.println(speedInput.freq);
     Serial.print(F("Saida velocidade: "));
     Serial.println(out_freq[1]);
-    */
-    Serial.print(F("Distancia total (km): "));
-    Serial.println(totalMileage/1000);
+    Serial.print(F("Pressao sensor: "));
+    Serial.println((int)sensorPressureVal);
+    Serial.print(F("Consumo Instantaneo: "));
+    Serial.print((out_freq[1]/((float) (speedSensor/1000.0f)))/consumption);
+    Serial.println(F(" km/l"));
     Serial.print(F("Odometro trip A (m): "));
     Serial.println(tripA);
- 
+    #endif
+    Serial.print(F("Distancia total (km): "));
+    Serial.println(totalMileage/1000);
     Serial.print(F("Velocidade: "));
     Serial.print(out_freq[1]/((float) (speedSensor/3600.0f)));
     Serial.println(F(" km/h"));
@@ -202,16 +207,12 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print(F("Consumo: "));
     Serial.print(consumption);
     Serial.println(F(" ml/s"));
-    /*Serial.print(F("Consumo Instantaneo: "));
-    Serial.print((out_freq[1]/((float) (speedSensor/1000.0f)))/consumption);
-    Serial.println(F(" km/l"));*/
     Serial.print(F("Tensao bateria: "));
     Serial.print(volts);
     Serial.println(F(" v"));
     Serial.print(F("RPM: "));
-    Serial.println((int)(injectorInput.freq * 60 *((settings & 2 == 0)+1)*2)); // semi, sequential
-    //Serial.print(F("Pressao sensor: "));
-    //Serial.println((int)sensorPressureVal);
+    Serial.println((int)(injectorInput.freq * 60 *((settings ^ 2 > 0)+1)*2)); // semi, sequential
+
     Serial.println(F("Pressione ESC para sair"));
     if (Serial.read() == 27)
       diagnostic_mode = false;
@@ -227,8 +228,11 @@ void subMenu_e(){
     if (settings%2 == 0)
       Serial.println(F(" (continuo)")); 
     else
-      Serial.println(F(" (curto)")); 
-    //Serial.println(F("6 Travamento automatico de portas km/h"));
+      Serial.println(F(" (curto)"));
+      
+    #ifndef is_ATM168p
+    Serial.println(F("6 Travamento automatico de portas km/h"));
+    #endif
     Serial.println(F("ESC Voltar"));
     varType typev = INT;
     for (;;) {
@@ -252,11 +256,11 @@ void subMenu_a(){
     Serial.println(F("1 Leitura sensor de velocidade"));
     Serial.println(F("2 Saida sinal de velocidade"));
     Serial.println(F("3 Saida sinal de consumo"));
-        Serial.print(F("5 Mudar leitura tipo injeção:"));    
-    if (settings & 2 == 0)
-      Serial.println(F(" (semisequencial)")); 
-    else
+        Serial.print(F("4 Mudar leitura tipo injeção:"));    
+    if (settings ^ 2 > 0)
       Serial.println(F(" (sequencial)")); 
+    else
+      Serial.println(F(" (semisequencial)")); 
     Serial.println(F("ESC Voltar"));
     varType typev = INT;
     for (;;) {

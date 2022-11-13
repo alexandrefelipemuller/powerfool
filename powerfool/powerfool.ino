@@ -1,5 +1,6 @@
 #define BUILD_DISPLAY
 //#define BUILD_BLUETOOTH
+#define is_ATM168p
 
 #include <EEPROM.h>
 #include "menu.h" 
@@ -32,7 +33,6 @@ LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars
 #define sensorPressure2 A7 // marrom
 
 #define injetor 20.0 // vazao do injetor a 12v, em lbs/h
-#define samples 4
 
 // set up pulse pins
 #define n_saidas_pulso 3
@@ -46,14 +46,16 @@ bool diagnostic_mode = false;
 
 unsigned long last_millis, totalMileage, tripA;
 unsigned int rpmLimit, rpmAlert, minPressure, speedSensor, settings;
-//unsigned int tank;
+
 unsigned char speedLimit;
-//unsigned char doorLockspd;
 bool doorLocked = false, speedBeep = false, rpmBeep = false;
 
 float odometer = 0;
-//float fuel = 0;
-
+#ifndef is_ATM168p
+float fuel = 0;
+unsigned int tank;
+unsigned char doorLockspd;
+#endif
 void setup()
 {
   Serial.begin(9600);
@@ -115,9 +117,11 @@ void loadMemoryValues(){
   EEPROM.get(12,minPressure);
   EEPROM.get(14,speedSensor);
   EEPROM.get(16,speedLimit);
-  //EEPROM.get(17,doorLockspd);
   EEPROM.get(18,settings);
-  //EEPROM.get(20,tank);
+  #ifndef is_ATM168p
+  EEPROM.get(17,doorLockspd);
+  EEPROM.get(20,tank);
+  #endif
 }
 
 void setupTimer1(){
@@ -144,7 +148,7 @@ void loop()
   float volts = analogRead(voltageIn)*0.0197f;
   
   inputFreq injectorInput, speedInput;
-  readFrequency(injector_pin, &injectorInput);
+  readFrequency(injector_pin, 2, &injectorInput);
   float duty;
   if ((float)(injectorInput.period) == 0.0f)
     duty=0.0;
@@ -159,7 +163,7 @@ void loop()
   else
     setOutFrequency(consumption/0.083f,0); 
   
-  readFrequency(speed_in_pin, &speedInput);
+  readFrequency(speed_in_pin, 4, &speedInput);
   if (speedInput.period == 0.0)
     setOutFrequency(0.0,1);  
   else
@@ -191,26 +195,32 @@ void loop()
   delay(5);
 }
 void calculateDistante(unsigned long elapsedtime){
+  #ifndef is_ATM168p
+    fuel += (out_freq[0]/1000)*elapsedtime;
+    if (fuel > 500.0){
+    tank-=fuel;
+    fuel=0.0;       
+    EEPROM.put(20, tank);
+    }
+  #endif
   odometer += (elapsedtime*out_freq[1])/((float) speedSensor); //meters
-  //fuel += (out_freq[0]/1000)*elapsedtime;
   if (odometer > 500.0){
-    //tank-=fuel;
-    //fuel=0.0;
     tripA += odometer;
     totalMileage += odometer;
     odometer = 0.0;
     EEPROM.put(4, totalMileage);
-    //EEPROM.put(20, tank);
   }
 }
 
 void speedManager(int currentSpeed){
-   /* if (doorLockspd > 0 && !doorLocked && currentSpeed > doorLockspd){
-    digitalWrite(relayOut,HIGH);
-    delay(300);
-    digitalWrite(relayOut,LOW);
-    doorLocked=true;
-  }*/
+  #ifndef is_ATM168p
+     if (doorLockspd > 0 && !doorLocked && currentSpeed > doorLockspd){
+      digitalWrite(relayOut,HIGH);
+      delay(300);
+      digitalWrite(relayOut,LOW);
+      doorLocked=true;
+    }
+  #endif
   if (speedLimit > 0){
     if (currentSpeed > speedLimit){
         if (settings % 2 == 0) //continuo ou curto
@@ -255,9 +265,9 @@ int alertsManager(int rpm){
   return sensorPressureVal;
 }
 
-void readFrequency(int pin, inputFreq *returnedValues){ 
+void readFrequency(int pin, char samples, inputFreq *returnedValues){ 
   for (int i=0;i < samples; i++){
-    unsigned long ontime = pulseInLong(pin,HIGH,200000);
+    unsigned long ontime = pulseInLong(pin,HIGH,250000);
     if (ontime == 0){
       (*returnedValues).offtime = 0.0; 
       (*returnedValues).period = 0.0;
@@ -265,7 +275,7 @@ void readFrequency(int pin, inputFreq *returnedValues){
       return;
     }
     (*returnedValues).ontime += ontime;
-    (*returnedValues).offtime += pulseInLong(pin,LOW,170000);
+    (*returnedValues).offtime += pulseInLong(pin,LOW,250000);
   }
   (*returnedValues).offtime = (*returnedValues).offtime/samples;
   (*returnedValues).ontime = (*returnedValues).ontime/samples;
@@ -289,8 +299,8 @@ void setOutFrequency(float baseFreq, int num){
   else
     drift=(float) (correction_drift[num]+32767)/32767.0f;
 
-  //out_freq[num]=(baseFreq*drift);
-  out_freq[num]=(out_freq[num]+(baseFreq*drift))/2; //Use median to Smooth the signal
+  out_freq[num]=(baseFreq*drift);
+  //out_freq[num]=(out_freq[num]+(baseFreq*drift))/2; //Use median to Smooth the signal
 }
 
 

@@ -39,7 +39,8 @@ unsigned long last_millis, totalMileage;
 unsigned int rpmBeep, rpmAlert, minPressure, speedSensor, settings;
 int iatAdjust, wideAdjust, wasteGateAdjust;
 unsigned char speedLimit;
-bool doorLocked = false, speedBeep = false;
+unsigned char currentMap;
+bool speedBeep = false;
 
 float odometer = 0;
 
@@ -93,7 +94,7 @@ void loop()
   float volts = analogRead(voltageIn)*0.0197f;
   
   inputFreq injectorInput, speedInput;
-  readFrequency(injector_pin, &injectorInput);
+  readFrequency(injector_pin, 3, &injectorInput);
   
   //Calculate distance
   unsigned long elapsedtime = millis() - last_millis;
@@ -105,12 +106,13 @@ void loop()
   }
   last_millis = millis();
 
+  readFrequency(speed_in_pin, 4, &speedInput);
   //Speed
-  unsigned char currentSpeed = (unsigned char) (out_freq[1]/((float) (speedSensor/3600.0f)));    
+  unsigned char currentSpeed = (unsigned char) (speedInput.freq/((float) (speedSensor/3600.0f)));    
   speedManager(currentSpeed);
   
   /* Alerts */
-  int rpm = injectorInput.freq*60*((settings & 2 == 0)*2);
+  int rpm = injectorInput.freq * 60 *(((settings ^ 2 > 0)+1)*2);
   int sensorPressureVal = alertsManager(rpm);
 
   /* Piggyback */
@@ -138,7 +140,7 @@ void loop()
 
   displayReport(rpm, volts, sensorPressureVal);
   sendBluetooth(injectorInput, speedInput, volts, sensorPressureVal);
-  delay(100);
+  delay(50);
 }
 
 void setupTimer1(){
@@ -152,7 +154,7 @@ void setupTimer1(){
 void loadMemoryValues(){
     if (EEPROM.read(0) == 255){
     //First boot, clear memory
-    EEPROM.put(0,(int)0);
+    EEPROM.put(0,(char)0);
     EEPROM.put(2,(int)0);
     EEPROM.put(4,(long)0);
     EEPROM.put(8,(int)0);
@@ -166,8 +168,7 @@ void loadMemoryValues(){
     EEPROM.put(25,(int)0);
   } 
   //Load values
-  EEPROM.get(0,correction_drift[0]);
-  EEPROM.get(2,correction_drift[1]);
+  EEPROM.get(0,currentMap);
   EEPROM.get(4,totalMileage);
   EEPROM.get(8,rpmBeep);
   EEPROM.get(10,rpmAlert);
@@ -209,25 +210,26 @@ int alertsManager(int rpm){
     digitalWrite(relayOut,HIGH);
     setOutFrequency(3,0);
   }
-  /*int sensorPressureVal2 = map(analogRead(A7), 204, 1024, 0, 10000);
-  if (rpmAlert > 0 && rpm > rpmAlert && sensorPressureVal2 < minPressure){
-    digitalWrite(relayOut,HIGH);
-    setOutFrequency(3,2);
-  }*/
   return sensorPressureVal;
 }
 
-void readFrequency(int pin, inputFreq *returnedValues){
-  (*returnedValues).ontime = pulseInLong(pin,HIGH,200000);
-  if ((*returnedValues).ontime == 0){
-     (*returnedValues).offtime = 0.0; 
-     (*returnedValues).period = 0.0;
-     (*returnedValues).freq = 0.0;
-  } else{
-    (*returnedValues).offtime = pulseInLong(pin,LOW,200000); 
-    (*returnedValues).period = ((*returnedValues).ontime+(*returnedValues).offtime);
-    (*returnedValues).freq = (1000000.0f/(*returnedValues).period);    
+// Read frequency and period from a pulse pin
+void readFrequency(int pin, char samples, inputFreq *returnedValues){ 
+  for (int i=0;i < samples; i++){
+    unsigned long ontime = pulseInLong(pin,HIGH,250000);
+    if (ontime == 0){
+      (*returnedValues).offtime = 0.0; 
+      (*returnedValues).period = 0.0;
+      (*returnedValues).freq = 0.0;
+      return;
+    }
+    (*returnedValues).ontime += ontime;
+    (*returnedValues).offtime += pulseInLong(pin,LOW,250000);
   }
+  (*returnedValues).offtime = (*returnedValues).offtime/samples;
+  (*returnedValues).ontime = (*returnedValues).ontime/samples;
+  (*returnedValues).period = ((*returnedValues).ontime+(*returnedValues).offtime);
+  (*returnedValues).freq = (1000000.0f/(*returnedValues).period);    
 }
 
 // Convert memory settings to drift in float

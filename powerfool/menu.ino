@@ -4,8 +4,8 @@
 * Memory is just 200 bytes, so we have to safe it
 * instead of storing objects, we have to store just the essential
 * <memory position = value, meaning>
-* 0 = correction drift 0, consume (2 bytes)
-* 2 = correction drift 1, speed (2 bytes)
+* 0 Current Map (1 byte) 
+* 1 <EMPTY>
 * 4 = Total odometer (4 bytes)
 * 8 = Shift Beep (2 bytes)
 * 10 = rpm alert (2 bytes)
@@ -13,13 +13,19 @@
 * 14 = pulses per km, speed sensor (2 bytes)
 *   Old VW 1800, Renault 4860, VW Fox 5000, chevrolet 15200
 * 16 = speed limit (1 byte)
-* 17 = lock doors speed (1 byte)
+* 17 <EMPTY>
 * 18 = Settings binary array (2 bytes)
 *     0 - speed beep type
 *     1 - injection sequential/semi
+* <MAP 0>
 * 21 - IAT sensor (2 bytes)
 * 23 - Lambda sensor (2 bytes)
 * 25 - Wastegate adjust (2 bytes)
+* 26 <EMPTY>
+* <MAP 1>
+* 30 - IAT sensor (2 bytes)
+* 32 - Lambda sensor (2 bytes)
+* 34 - Wastegate adjust (2 bytes)
 */
 void(* resetFunc) (void) = 0;
 
@@ -41,9 +47,10 @@ void Menu() {
   Serial.println(F("Select one of the following options:"));
   Serial.println(F("1 Ajustes"));
   Serial.println(F("2 Funcoes especiais"));
-  Serial.println(F("3 Modo diagnostico"));
-  Serial.println(F("4 Sair do menu"));
-  Serial.println(F("5 Reboot"));
+  Serial.println(F("3 Selecionar Mapa"));
+  Serial.println(F("4 Modo diagnostico"));
+  Serial.println(F("5 Sair do menu"));
+  Serial.println(F("6 Reboot"));
   Serial.print(F("* Version:"));
   Serial.println(SW_VERSION,DEC);
  
@@ -51,9 +58,10 @@ void Menu() {
         switch (Serial.read()) {
             case '1': subMenu_a(); break;
             case '2': subMenu_e(); break;
-            case '3': diagnostic_mode=true; break;
-            case '4': Serial.println(F("bye...")); Serial.end();
-            case '5': resetFunc();
+            case '3': subMenu_map(); break;
+            case '4': diagnostic_mode=true; break;
+            case '5': Serial.println(F("bye...")); Serial.end();
+            case '6': Serial.println(F("rebooting..."));resetFunc();
             default: continue;  // includes the case 'no input'
         }
       Menu();
@@ -61,6 +69,26 @@ void Menu() {
     }
 }
 
+void subMenu_map(){
+  Serial.println(F("Select one of the following options:"));
+  Serial.println(F("1 Mapa 1"));
+  Serial.println(F("2 Mapa 2"));
+  Serial.println(F("3 Mapa 3"));
+  Serial.println(F("4 Mapa 4"));
+  Serial.println(F("5 Mapa 5"));
+    for (;;) {
+        switch (Serial.read()) {
+            case '1': currentMap = 0; break;
+            case '2': currentMap = 1; break;
+            case '3': currentMap = 2; break;
+            case '4': currentMap = 3; break;
+            case '5': currentMap = 4; break;
+            case 27: EEPROM.put(currentMap, (char) currentMap); return;
+            default: continue;  // includes the case 'no input'
+        }
+      break;
+    }
+}
 
 /* Prompt user and store a numerical parameter */  
 void subMenu_num(int position, bool isPercent, varType t){
@@ -121,7 +149,8 @@ void subMenu_num(int position, bool isPercent, varType t){
                   value-=step;
               	numberEntry(value,position,isPercent);
               	break;
-            case 'a': 
+            case 'a':
+            case 'A':  
                 if (value >= upperLimit-(step*10))
                   value = upperLimit-(step*10);
                 else
@@ -129,13 +158,15 @@ void subMenu_num(int position, bool isPercent, varType t){
          			numberEntry(value,position,isPercent);
          			break;
             case 'd': 
+            case 'D': 
                 if (value <= lowerLimit+(step*10))
                   value = lowerLimit+(step*10);
                 else
                   value-=(step*10);
          			numberEntry(value,position,isPercent);
          			break;
-            case 's': 
+            case 's':
+            case 'S':
                 Serial.println("Salvando valor...");
                 if (isPercent){
                   Serial.println(memValueToCorrection(value));
@@ -162,7 +193,6 @@ void numberEntry(int value, int position, bool isPercent){
   Serial.print(F("Novo valor: "));
   if (isPercent){
      Serial.print(memValueToCorrection(value));
-     correction_drift[position/2] = value;
      Serial.print(F("% de correcao"));
   }
   else{
@@ -180,12 +210,8 @@ float memValueToCorrection(int value){
 void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float volts, int sensorPressureVal){
     Serial.print(F("Entrada velocidade: "));
     Serial.println(speedInput.freq);
-    Serial.print(F("Saida velocidade: "));
-    Serial.println(out_freq[1]);
-    
     Serial.print(F("Distancia total (km): "));
     Serial.println(totalMileage/1000);
- 
     Serial.print(F("Velocidade: "));
     Serial.print(out_freq[1]/((float) (speedSensor/3600.0f)));
     Serial.println(F(" km/h"));
@@ -197,7 +223,7 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float volts
     Serial.print(volts);
     Serial.println(F(" v"));
     Serial.print(F("RPM: "));
-    Serial.println((int)(injectorInput.freq * 60 *((settings & 2 == 0)*2) )); // semi, sequential
+    Serial.println((int)(injectorInput.freq * 60 *((settings ^ 2 > 0)+1)*2)); // semi, sequential
     Serial.print(F("Pressao sensor: "));
     Serial.println((int)sensorPressureVal);
     Serial.println(F("Pressione ESC para sair"));
@@ -216,7 +242,6 @@ void subMenu_e(){
       Serial.println(F(" (continuo)")); 
     else
       Serial.println(F(" (curto)")); 
-    Serial.println(F("6 Travamento automatico de portas km/h"));
     Serial.println(F("ESC Voltar"));
     varType typev = INT;
     for (;;) {
@@ -226,7 +251,6 @@ void subMenu_e(){
             case '3': subMenu_num(12,false,typev); break;
             case '4': typev = UCHAR; subMenu_num(16,false,typev); break;
             case '5': settingsChange(0); break;
-            case '6': typev = UCHAR; subMenu_num(17,false,typev); break;
             case 27: return;
             default: continue;  // includes the case 'no input'
         }
@@ -238,11 +262,10 @@ void subMenu_a(){
     printBannerMsg("Ajustes");
     Serial.println(F("Select one of the following options:"));
     Serial.println(F("1 Leitura sensor de velocidade"));
-    Serial.println(F("2 Saida sensor de velocidade"));
-    Serial.println(F("3 Saida sensor de temperatura do ar"));
-    Serial.println(F("4 Saida sensor de sonda lambda"));
-    Serial.println(F("5 Saida sensor wastegate"));
-        Serial.print(F("6 Mudar leitura tipo injeção:"));    
+    Serial.println(F("2 Saida sensor de temperatura do ar"));
+    Serial.println(F("3 Saida sensor de sonda lambda"));
+    Serial.println(F("4 Saida sensor wastegate"));
+        Serial.print(F("5 Mudar leitura tipo injeção:"));    
     if (settings & 2 == 0)
       Serial.println(F(" (semisequencial)")); 
     else
@@ -252,11 +275,25 @@ void subMenu_a(){
     for (;;) {
         switch (Serial.read()) {
             case '1':  subMenu_num(14,false,typev); break;
-            case '2':  subMenu_num(2,true,typev); break;
-            case '3':  subMenu_num(21,true,typev); break;
-            case '4':  subMenu_num(23,true,typev); break;
-            case '5':  subMenu_num(25,true,typev); break;
-            case '6':  settingsChange(1); break;
+            case '2':  
+                        if (currentMap == 0)
+                          subMenu_num(21,true,typev);
+                        else
+                          subMenu_num(30,true,typev); 
+                        break;
+            case '3':  
+                        if (currentMap == 0)
+                          subMenu_num(23,true,typev);
+                        else
+                          subMenu_num(32,true,typev); 
+                        break;
+            case '4':
+                        if (currentMap == 0)
+                          subMenu_num(25,true,typev);
+                        else
+                          subMenu_num(34,true,typev); 
+                        break;
+            case '5':  settingsChange(1); break;
             case 27: return;
             default: continue;  // includes the case 'no input'
         }

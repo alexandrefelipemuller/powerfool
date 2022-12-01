@@ -219,13 +219,25 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float volts
     Serial.print(injectorInput.freq);
     Serial.print("Hz, (%)");
     float duty = (float)injectorInput.offtime/(float)(injectorInput.period);
-    Serial.print(F("Tensao bateria: "));
-    Serial.print(volts);
-    Serial.println(F(" v"));
     Serial.print(F("RPM: "));
     Serial.println((int)(injectorInput.freq * 60 *((settings ^ 2 > 0)+1)*2)); // semi, sequential
     Serial.print(F("Pressao sensor: "));
     Serial.println((int)sensorPressureVal);
+    Serial.print(F("Wideband: "));
+    Serial.println(analogRead(wideBandSensor));
+    Serial.print(F("Wideband Out: "));
+    Serial.println(analogRead(wideBandOut));
+    Serial.print(F("Wastegate: "));
+    Serial.println(analogRead(wasteGate));
+    Serial.print(F("Wastegate Out: "));
+    Serial.println(analogRead(wasteGateOut));
+    Serial.print(F("Intake In: "));
+    Serial.println(analogRead(intakeAirTemp));
+    Serial.print(F("Intake Out: "));
+    Serial.println(analogRead(intakeAirTempOut));
+    Serial.print(F("Tensao bateria: "));
+    Serial.print(volts);
+    Serial.println(F(" v"));
     Serial.println(F("Pressione ESC para sair"));
     if (Serial.read() == 27)
       diagnostic_mode = false;

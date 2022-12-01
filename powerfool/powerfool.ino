@@ -9,10 +9,10 @@
 
 #define speed_in_pin 2
 #define speed_out_pin 3
-#define wasteGateOut 4
-#define intakeAirTempOut 5
-#define wideBandOut 6
-#define relayOut 10
+#define wasteGateOut 9
+#define intakeAirTempOut 10
+#define wideBandOut 11
+#define relayOut 4
 #define injector_pin 12
 #define beep 13
 #define wideBandSensor A0
@@ -126,7 +126,7 @@ void loop()
   input = input*drift;
   analogWrite(wasteGateOut, map(input, 0, 1023, 0, 255));
 
-  analogRead(intakeAirTemp);
+  input = analogRead(intakeAirTemp);
   drift = getDrift(iatAdjust);
   input = input*drift;
   analogWrite(intakeAirTempOut, map(input, 0, 1023, 0, 255));

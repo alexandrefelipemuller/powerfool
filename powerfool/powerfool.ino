@@ -1,6 +1,7 @@
 #define BUILD_DISPLAY
-//#define BUILD_BLUETOOTH
-#define is_ATM168p
+#define BUILD_BLUETOOTH
+//#define is_ESP32
+//#define is_ATM168p
 
 #include <EEPROM.h>
 #include "menu.h" 
@@ -10,9 +11,9 @@
 #include <LiquidCrystal_I2C.h>
 LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 //BLUETOOTH
-//#include "bluetooth.h"
-//#include <SoftwareSerial.h>
-//SoftwareSerial BTSerial (8,9);
+#include "bluetooth.h"
+#include <SoftwareSerial.h>
+SoftwareSerial BTSerial (8,9);
 
 #define timer_freq 3000
 
@@ -25,6 +26,7 @@ LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars
 #define consume_pin 11 // j4, branco/cinza
 #define injector_pin 12 // j3, roxo
 #define beep 13 // internal
+
 #define wideBandSensor A0
 #define voltageIn A1 // internal
 #define sensorPressure A2 // azul
@@ -104,7 +106,7 @@ void loadMemoryValues(){
     EEPROM.put(12,(int)0);
     EEPROM.put(14,(int)4860);
     EEPROM.put(16,(char)0);
-    //EEPROM.put(17,(char)0);
+    EEPROM.put(17,(char)0);
     EEPROM.put(18,(int)0);
     EEPROM.put(20,(int)20000);
   } 
@@ -124,13 +126,24 @@ void loadMemoryValues(){
   #endif
 }
 
-void setupTimer1(){
-  TCCR1A = 0;                        //confira timer para operação normal pinos OC1A e OC1B desconectados
-  TCCR1B = 0;                        //limpa registrador
-  TCCR1B |= (1<<CS10)|(1 << CS12);   // configura prescaler para 1024: CS12 = 1 e CS10 = 1
-  TCNT1 = 65536-(16000000/1024/timer_freq); //configura timer
-  TIMSK1 |= (1 << TOIE1);           // habilita a interrupção do TIMER1
-}
+#ifdef is_ESP32
+  hw_timer_t *esp_timer = NULL;
+  void setupTimer1(){
+      esp_timer = timerBegin(0, 80, true);
+      timerAttachInterrupt(esp_timer, &onTimer, true);
+      timerAlarmWrite(esp_timer, (1000000/timer_freq), true);
+      timerAlarmEnable(esp_timer);
+  }
+#else
+  void setupTimer1(){
+    TCCR1A = 0;                        //confira timer para operação normal pinos OC1A e OC1B desconectados
+    TCCR1B = 0;                        //limpa registrador
+    TCCR1B |= (1<<CS10)|(1 << CS12);   // configura prescaler para 1024: CS12 = 1 e CS10 = 1
+    TCNT1 = 65536-(16000000/1024/timer_freq); //configura timer
+    TIMSK1 |= (1 << TOIE1);           // habilita a interrupção do TIMER1
+  }
+#endif
+
 
 void loop()
 {
@@ -306,8 +319,19 @@ void setOutFrequency(float baseFreq, int num){
 
 /* This timer runs 3k times a second and verify if need to change state of any pulse output
  */
+#ifdef is_ESP32
+void IRAM_ATTR onTimer(){
+ timerLoop(); 
+}
+#else
 ISR(TIMER1_OVF_vect)
 {
+  timerLoop();
+  TCNT1 = 65536-(16000000/1024/timer_freq); // timer reset
+}
+#endif
+
+void timerLoop(){
  unsigned long currentTime = micros();
  for (int i=0;i < n_saidas_pulso; i++){
     if ((out_freq[i] > 2.0) &&
@@ -316,5 +340,4 @@ ISR(TIMER1_OVF_vect)
       digitalWrite(pulse_pin[i],!digitalRead(pulse_pin[i]));
     }
  }
- TCNT1 = 65536-(16000000/1024/timer_freq); // timer reset
 }

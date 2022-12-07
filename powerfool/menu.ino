@@ -1,5 +1,9 @@
 #include <EEPROM.h>
+#ifndef is_ESP32
 #include <avr/pgmspace.h>
+#else
+#define F(s) (s)
+#endif
 /* 
 * Memory is just 200 bytes, so we have to safe it
 * instead of storing objects, we have to store just the essential
@@ -21,7 +25,12 @@
 *     
 * 20 = fuel tank (1 byte)
 */
-void(* resetFunc) (void) = 0;
+
+#ifdef is_ESP32
+  void resetFunc(){}
+#else
+  void(* resetFunc) (void) = 0;
+#endif
 
 void printBannerMsg(const char *message){
   Serial.println(F("|****************************|"));

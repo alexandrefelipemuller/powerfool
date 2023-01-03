@@ -13,26 +13,28 @@ LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars
 //BLUETOOTH
 #include "bluetooth.h"
 #include <SoftwareSerial.h>
-SoftwareSerial BTSerial (8,9);
+SoftwareSerial BTSerial (7,8);
 
 #define timer_freq 3000
 
-#define speed_in_pin 2 // j8, verde
-#define speed_out_pin 3 // j5, vermelho/laranja
-#define wasteGateOut 4
-#define setButton 5
-#define menuButton 6
-#define relayOut 10 // j11
-#define consume_pin 11 // j4, branco/cinza
-#define injector_pin 12 // j3, roxo
-#define beep 13 // internal
+#define setButton 2
+#define menuButton 3
+#define beep 4
+#define speed_in_pin 5
+#define injector_pin 6
+#define RL3 9
+#define RL2 10
+#define RL1 11
+#define speed_out_pin 12
+#define consume_pin 13
 
-#define wideBandSensor A0
+
+#define BreakLight A0
 #define voltageIn A1 // internal
-#define sensorPressure A2 // azul
+#define sensorPressure A2
 #define intakeAirTemp A3
-#define wasteGate A6
-#define sensorPressure2 A7 // marrom
+#define sensorTemp A6
+#define sensorPressure2 A7
 
 #define injetor 20.0 // vazao do injetor a 12v, em lbs/h
 
@@ -65,19 +67,16 @@ void setup()
   pinMode(speed_in_pin,INPUT_PULLUP);
   pinMode(voltageIn, INPUT);
   pinMode(sensorPressure,INPUT);
-  pinMode(wideBandSensor,INPUT);
-  pinMode(intakeAirTemp,INPUT);
-  pinMode(wasteGate,INPUT);
-  pinMode(sensorPressure2,INPUT);
-  pinMode(relayOut, OUTPUT);
   pinMode(beep, OUTPUT);
   pinMode(consume_pin,OUTPUT);
   pinMode(speed_out_pin,OUTPUT);
-  pinMode(wasteGateOut,OUTPUT);
+  pinMode(RL1,OUTPUT);
+  pinMode(RL2,OUTPUT);
+  pinMode(RL3,OUTPUT);
   pinMode(setButton,INPUT_PULLUP);
   pinMode(menuButton,INPUT_PULLUP);
   //attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, CHANGE);
-  
+  pulsePin(beep,500);
   pulse_pin[0]=consume_pin;
   pulse_pin[1]=speed_out_pin;
   pulse_pin[2]=beep;
@@ -228,9 +227,7 @@ void calculateDistante(unsigned long elapsedtime){
 void speedManager(int currentSpeed){
   #ifndef is_ATM168p
      if (doorLockspd > 0 && !doorLocked && currentSpeed > doorLockspd){
-      digitalWrite(relayOut,HIGH);
-      delay(300);
-      digitalWrite(relayOut,LOW);
+      pulsePin(RL2,300);
       doorLocked=true;
     }
   #endif
@@ -240,13 +237,8 @@ void speedManager(int currentSpeed){
           digitalWrite(beep,HIGH);
         else{
           if (!speedBeep){
-          digitalWrite(beep,HIGH);
-          delay(80);
-          digitalWrite(beep,LOW);
-          delay(80);
-          digitalWrite(beep,HIGH);
-          delay(80);
-          digitalWrite(beep,LOW);
+          pulsePin(beep,80);
+          pulsePin(beep,80);
           }
         }
         speedBeep=true;
@@ -272,7 +264,7 @@ int alertsManager(int rpm){
   }
   int sensorPressureVal = map(analogRead(A2), 204, 1024, 0, 10000);
   if (rpmAlert > 0 && rpm > rpmAlert && sensorPressureVal < minPressure){
-    digitalWrite(relayOut,HIGH);
+    digitalWrite(RL1,HIGH);
     setOutFrequency(3,2);
   }
   return sensorPressureVal;
@@ -316,6 +308,12 @@ void setOutFrequency(float baseFreq, int num){
   //out_freq[num]=(out_freq[num]+(baseFreq*drift))/2; //Use median to Smooth the signal
 }
 
+void pulsePin(unsigned char pin, unsigned long ms){
+  digitalWrite(pin,HIGH);
+  delay(ms);
+  digitalWrite(pin,LOW);
+  delay(ms);
+}
 
 /* This timer runs 3k times a second and verify if need to change state of any pulse output
  */

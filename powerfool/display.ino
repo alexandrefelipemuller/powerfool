@@ -61,13 +61,15 @@ void menu2(float out_freq, float consumption){
 }
 
 void menu3(){
-  lcd.print(("sensor1:"));
-  lcd.print((float)(analogRead(A7)/204));
-  lcd.print((" v"));
+  lcd.print(("Temperatura:"));
+  char temp1 = 106-(analogRead(sensorTemp)/7.7f);
+  lcd.print(temp1);
+  lcd.print((" °C"));
   lcd.setCursor(0,1);
-  lcd.print(("sensor2:"));
-  lcd.print((float)(analogRead(A6)/204));
-  lcd.print((" v"));
+  temp1 = 106-(analogRead(intakeAirTemp)/7.7f);
+  lcd.print(("Temperatura Ar:"));
+  lcd.print(temp1);
+  lcd.print((" °C"));
 }
 
 void menu4(){

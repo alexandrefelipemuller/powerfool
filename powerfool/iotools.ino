@@ -37,7 +37,7 @@ void setOutFrequency(float baseFreq, int num){
   //out_freq[num]=(out_freq[num]+(baseFreq*drift))/2; //Use median to Smooth the signal
 }
 
-void pulsePin(unsigned char pin, unsigned long ms){
+void pulsePinOnce(unsigned char pin, unsigned long ms){
   digitalWrite(pin,HIGH);
   delay(ms);
   digitalWrite(pin,LOW);

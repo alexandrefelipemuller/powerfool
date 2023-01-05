@@ -66,6 +66,9 @@ void setup()
   pinMode(speed_in_pin,INPUT_PULLUP);
   pinMode(voltageIn, INPUT);
   pinMode(sensorPressure,INPUT);
+  pinMode(sensorPressure2, INPUT);
+  pinMode(intakeAirTemp,INPUT);
+  pinMode(sensorTemp,INPUT);
   pinMode(beep, OUTPUT);
   pinMode(consume_pin,OUTPUT);
   pinMode(speed_out_pin,OUTPUT);
@@ -76,10 +79,11 @@ void setup()
   pinMode(menuButton,INPUT_PULLUP);
   
   #ifdef BUILD_DISPLAY
-  attachInterrupt(digitalPinToInterrupt(setButton), setMenu, CHANGE);  
-  attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, CHANGE);
+  // Arduino freezes TODO discover why
+  //attachInterrupt(digitalPinToInterrupt(setButton), setMenu, CHANGE);  
+  //attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, LOW);
   #endif
-  pulsePin(beep,500);
+  pulsePinOnce(beep,500);
   pulse_pin[0]=consume_pin;
   pulse_pin[1]=speed_out_pin;
   pulse_pin[2]=beep;
@@ -151,6 +155,14 @@ void loop()
 {
   if (Serial.available() > 0)
     Menu();
+
+  #ifdef BUILD_DISPLAY
+  if (digitalRead(setButton) == LOW)
+    setMenu();
+
+  if (digitalRead(menuButton) == LOW)
+    changeMenu();
+  #endif
   
   float volts = analogRead(voltageIn)*0.0197f;
   
@@ -226,12 +238,12 @@ void speedManager(int currentSpeed){
     unsigned long deceleration = (lastSpeed - currentSpeed)/(elapsedTime*1000);
     lastSpeed = currentSpeed; 
     if (digitalRead(breakLight) == HIGH && deceleration > 28){
-      pulsePin(RL3,500);
+      pulsePinOnce(RL3,500);
     }
 
     /* door lock */
     if (doorLockspd > 0 && !doorLocked && currentSpeed > doorLockspd){
-      pulsePin(RL2,300);
+      pulsePinOnce(RL2,300);
       doorLocked=true;
     }
   #endif
@@ -242,8 +254,8 @@ void speedManager(int currentSpeed){
           digitalWrite(beep,HIGH);
         else{
           if (!speedBeep){
-          pulsePin(beep,80);
-          pulsePin(beep,80);
+          pulsePinOnce(beep,80);
+          pulsePinOnce(beep,80);
           }
         }
         speedBeep=true;

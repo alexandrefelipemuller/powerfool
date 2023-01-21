@@ -1,15 +1,16 @@
 
-void readFrequency(int pin, char samples, inputFreq *returnedValues){ 
+void readFrequency(int pin, char samples, inputFreq *returnedValues){
+  (*returnedValues).offtime = 0.0; 
+  (*returnedValues).ontime = 0.0; 
+  (*returnedValues).period = 0.0;
+  (*returnedValues).freq = 0.0;
   for (int i=0;i < samples; i++){
-    unsigned long ontime = pulseInLong(pin,HIGH,250000);
+    unsigned long ontime = pulseInLong(pin,HIGH,200000);
     if (ontime == 0){
-      (*returnedValues).offtime = 0.0; 
-      (*returnedValues).period = 0.0;
-      (*returnedValues).freq = 0.0;
       return;
     }
     (*returnedValues).ontime += ontime;
-    (*returnedValues).offtime += pulseInLong(pin,LOW,250000);
+    (*returnedValues).offtime += pulseInLong(pin,LOW,200000);
   }
   (*returnedValues).offtime = (*returnedValues).offtime/samples;
   (*returnedValues).ontime = (*returnedValues).ontime/samples;

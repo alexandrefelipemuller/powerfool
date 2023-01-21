@@ -9,11 +9,3 @@ typedef enum types{
     INT
 } varType;
 varType typef;
-
-struct inputFreq{
-  unsigned long ontime;
-  unsigned long offtime;
-  unsigned long period;
-  float freq;
-};
-typedef struct inputFreq inputFreq;

@@ -53,6 +53,9 @@ void Menu() {
   Serial.println(F("3 Modo diagnostico"));
   Serial.println(F("4 Sair do menu"));
   Serial.println(F("5 Reboot"));
+  #ifdef is_TEST  
+    Serial.println(F("6 Relatorio de teste"));
+  #endif
   Serial.print(F("* Version:"));
   Serial.println(SW_VERSION,DEC);
  
@@ -63,6 +66,10 @@ void Menu() {
             case '3': diagnostic_mode=true; break;
             case '4': Serial.println(F("bye...")); Serial.end();
             case '5': resetFunc();
+            #ifdef is_TEST  
+            case '6': testReport();
+            #endif
+
             default: continue;  // includes the case 'no input'
         }
       Menu();
@@ -188,7 +195,6 @@ float memValueToCorrection(int value){
     return float (value/327.67f);
 }
 void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consumption, float volts, int sensorPressureVal){
-    #ifndef is_ATM168p
     Serial.print(F("Entrada velocidade: "));
     Serial.println(speedInput.freq);
     Serial.print(F("Saida velocidade: "));
@@ -200,7 +206,6 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.println(F(" km/l"));
     Serial.print(F("Odometro trip A (m): "));
     Serial.println(tripA);
-    #endif
     Serial.print(F("Distancia total (km): "));
     Serial.println(totalMileage/1000);
     Serial.print(F("Velocidade: "));
@@ -238,10 +243,7 @@ void subMenu_e(){
       Serial.println(F(" (continuo)")); 
     else
       Serial.println(F(" (curto)"));
-      
-    #ifndef is_ATM168p
     Serial.println(F("6 Travamento automatico de portas km/h"));
-    #endif
     Serial.println(F("ESC Voltar"));
     varType typev = INT;
     for (;;) {
@@ -285,6 +287,69 @@ void subMenu_a(){
         break;
     }
 }
+
+#ifdef is_TEST  
+void testReport(){
+   float volts = analogRead(voltageIn)*0.0197f;
+   Serial.print(F("Tensao bateria: "));
+   Serial.print(volts);
+   Serial.println(F(" v"));
+   inputFreq dg1, dg2;
+   readFrequency(injector_pin, 15, &dg1);
+   readFrequency(speed_in_pin, 15, &dg2);
+   Serial.print(F("Digital Input 1: "));
+   if (dg1.freq > 126.0f || dg1.freq <  114.0f)
+      Serial.println("Failed!");
+   else{
+      Serial.println("OK");
+      Serial.print(F("Digital Output 1: "));
+      Serial.println("OK");
+   }
+   Serial.print(F("Digital Input 2: "));
+   if (dg2.freq > 126.0f || dg2.freq <  114.0f)
+      Serial.println("Failed!");
+   else{
+      Serial.println("OK");
+      Serial.print(F("Digital Output 2: "));
+      Serial.println("OK");
+   }
+  Serial.print(F("Digital input 3: "));
+  Serial.println(analogRead(breakLight));
+   
+   Serial.print(F("Sensor Input 1: "));
+   if (digitalRead(sensorTemp) != HIGH)
+      Serial.println("Failed!");
+   else
+      Serial.println("OK");
+   Serial.print(F("Sensor Input 2: "));
+   if (digitalRead(intakeAirTemp) != HIGH)
+      Serial.println("Failed!");
+   else
+      Serial.println("OK");
+   Serial.print(F("Analog Input 1: "));
+      if (digitalRead(sensorPressure) != HIGH)
+      Serial.println("Failed!");
+   else
+      Serial.println("OK");
+   Serial.print(F("Analog Input 2: "));
+   if (digitalRead(sensorPressure2) != HIGH)
+      Serial.println("Failed!");
+   else
+      Serial.println("OK");
+  digitalWrite(RL1, HIGH);
+  digitalWrite(RL2, HIGH);
+  Serial.print(F("setButton: "));
+  if (digitalRead(setButton) != LOW)
+    Serial.println("Failed!");
+  else
+    Serial.println("OK");
+  Serial.print(F("menuButton: "));
+  if (digitalRead(menuButton) != LOW)
+    Serial.println("Failed!");
+  else
+    Serial.println("OK");
+}
+#endif
 
 void clearScreen(){
     Serial.write(27);

@@ -1,6 +1,7 @@
+
+
 void changeMenu() {
   currentMenu++;
-  lcd.clear();
 }
 
 void setMenu() {
@@ -16,12 +17,10 @@ void setMenu() {
         bestLap=lastLap;
       startLap=millis();
       break;
-    #ifndef is_ATM168p
     case 5:
       if (tank > 60000)
         tank=0;
       tank+=5000;
-    #endif
     default:
       break;
   }
@@ -61,15 +60,17 @@ void menu2(float out_freq, float consumption){
 }
 
 void menu3(){
-  lcd.print(("Temperatura:"));
+  lcd.print(("Temp.:"));
   char temp1 = 106-(analogRead(sensorTemp)/7.7f);
   lcd.print(temp1);
-  lcd.print((" °C"));
-  lcd.setCursor(0,1);
+  lcd.write(0);
+  lcd.print(("C "));
+   lcd.setCursor(0,1);
   temp1 = 106-(analogRead(intakeAirTemp)/7.7f);
-  lcd.print(("Temperatura Ar:"));
+  lcd.print(("Temp. Ar:"));
   lcd.print(temp1);
-  lcd.print((" °C"));
+  lcd.write(0);
+  lcd.print(("C "));
 }
 
 void menu4(){
@@ -87,7 +88,6 @@ void menu4(){
     lcd.print(" ");
 }
 
-#ifndef is_ATM168p
   void menu5(){
     lcd.print((int)(tank/1000));
     lcd.print(".");
@@ -98,7 +98,6 @@ void menu4(){
     lcd.print((float)(tank*(tripA/tank)));
     lcd.print(F(" km"));
   }
-#endif
 
 void printTime(unsigned long lTime){
     lcd.print((unsigned int)(lTime/60000));
@@ -122,6 +121,7 @@ void padNumber(unsigned char number){
 
 void refreshMenu(inputFreq injectorInput, inputFreq speedInput, float consumption, float volts, int sensorPressureVal) {
   int rpm = injectorInput.freq*60*((settings & 2 == 0)*2);
+  //lcd.clear();
   lcd.setCursor(0,0);
   switch (currentMenu)
   {
@@ -137,11 +137,9 @@ void refreshMenu(inputFreq injectorInput, inputFreq speedInput, float consumptio
     case 4:
      menu4();
       break;
-     #ifndef is_ATM168p
-      case 5:
+    case 5:
       menu5();
       break;
-     #endif
     default:
       currentMenu = 0;
       menu0();

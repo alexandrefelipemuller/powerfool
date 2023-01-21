@@ -1,7 +1,7 @@
 #define BUILD_DISPLAY
 #define BUILD_BLUETOOTH
 //#define is_ESP32
-//#define is_ATM168p
+//#define is_TEST true //Used to test hardware
 
 #include <EEPROM.h>
 #include "menu.h" 
@@ -54,16 +54,15 @@ unsigned char speedLimit, lastSpeed;
 bool doorLocked = false, speedBeep = false, rpmBeep = false;
 
 float odometer = 0;
-#ifndef is_ATM168p
 float fuel = 0;
 unsigned int tank;
 unsigned char doorLockspd;
-#endif
 void setup()
 {
   Serial.begin(9600);
   pinMode(injector_pin,INPUT);
   pinMode(speed_in_pin,INPUT_PULLUP);
+  pinMode(breakLight,INPUT);
   pinMode(voltageIn, INPUT);
   pinMode(sensorPressure,INPUT);
   pinMode(sensorPressure2, INPUT);
@@ -79,9 +78,8 @@ void setup()
   pinMode(menuButton,INPUT_PULLUP);
   
   #ifdef BUILD_DISPLAY
-  // Arduino freezes TODO discover why
-  //attachInterrupt(digitalPinToInterrupt(setButton), setMenu, CHANGE);  
-  //attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, LOW);
+  attachInterrupt(digitalPinToInterrupt(setButton), setMenu, CHANGE);  
+  attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, CHANGE);
   #endif
   pulsePinOnce(beep,500);
   pulse_pin[0]=consume_pin;
@@ -94,6 +92,7 @@ void setup()
 
   #ifdef BUILD_DISPLAY
     lcd.init();
+    lcd.createChar(0, degreeSymbol);
     lcd.backlight(); 
   #endif
   #ifdef BUILD_BLUETOOTH
@@ -126,10 +125,8 @@ void loadMemoryValues(){
   EEPROM.get(14,speedSensor);
   EEPROM.get(16,speedLimit);
   EEPROM.get(18,settings);
-  #ifndef is_ATM168p
   EEPROM.get(17,doorLockspd);
   EEPROM.get(20,tank);
-  #endif
 }
 
 #ifdef is_ESP32
@@ -157,11 +154,10 @@ void loop()
     Menu();
 
   #ifdef BUILD_DISPLAY
-  if (digitalRead(setButton) == LOW)
-    setMenu();
-
-  if (digitalRead(menuButton) == LOW)
-    changeMenu();
+  //if (digitalRead(setButton) == LOW)
+  //  setMenu();
+  //if (digitalRead(menuButton) == LOW)
+  //  changeMenu();
   #endif
   
   float volts = analogRead(voltageIn)*0.0197f;
@@ -176,20 +172,28 @@ void loop()
    
   float vazao = injetor * (0.126); // result in ml/s 
   float consumption = injectorInput.freq*vazao*duty;
-  
-  if (injectorInput.period == 0.0)
-    setOutFrequency(0.0,0);  
-  else
-    setOutFrequency(consumption/0.083f,0); 
-  
+
   readFrequency(speed_in_pin, 4, &speedInput);
-  if (speedInput.period == 0.0)
-    setOutFrequency(0.0,1);  
-  else
-    setOutFrequency(speedInput.freq,1);
-   
-  //Calculate distance and consumed fuel
-  calculateDistante(millis() - last_millis);
+  
+  #ifndef is_TEST  
+    if (injectorInput.period == 0.0)
+      setOutFrequency(0.0,0);  
+    else
+      setOutFrequency(consumption/0.083f,0); 
+    
+    if (speedInput.period == 0.0)
+      setOutFrequency(0.0,1);  
+    else
+      setOutFrequency(speedInput.freq,1);
+
+   //Calculate distance and consumed fuel
+   calculateDistante(millis() - last_millis);
+  #else
+    pinMode(injector_pin,INPUT_PULLUP );
+    setOutFrequency(120.0f,0);
+    setOutFrequency(120.0f,1); 
+  #endif
+
   last_millis = millis();
 
   //Speed
@@ -214,14 +218,12 @@ void loop()
   delay(5);
 }
 void calculateDistante(unsigned long elapsedtime){
-  #ifndef is_ATM168p
     fuel += (out_freq[0]/1000)*elapsedtime;
     if (fuel > 500.0){
     tank-=fuel;
     fuel=0.0;       
     EEPROM.put(20, tank);
     }
-  #endif
   odometer += (elapsedtime*out_freq[1])/((float) speedSensor); //meters
   if (odometer > 500.0){
     tripA += odometer;
@@ -232,7 +234,6 @@ void calculateDistante(unsigned long elapsedtime){
 }
 
 void speedManager(int currentSpeed){
-  #ifndef is_ATM168p
     /* Emergency Stop Signal */
     unsigned long elapsedTime = millis() - last_millis;
     unsigned long deceleration = (lastSpeed - currentSpeed)/(elapsedTime*1000);
@@ -246,7 +247,7 @@ void speedManager(int currentSpeed){
       pulsePinOnce(RL2,300);
       doorLocked=true;
     }
-  #endif
+    
   /* Speed limit */
   if (speedLimit > 0){
     if (currentSpeed > speedLimit){

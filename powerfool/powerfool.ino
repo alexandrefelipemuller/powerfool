@@ -194,11 +194,11 @@ void loop()
     setOutFrequency(120.0f,1); 
   #endif
 
-  last_millis = millis();
-
   //Speed
   unsigned char currentSpeed = (unsigned char) (out_freq[1]/((float) (speedSensor/3600.0f)));    
   speedManager(currentSpeed);
+  
+  last_millis = millis();
   
   /* Alerts */
   int rpm = injectorInput.freq*60*(((settings & 2 == 0)+1)*2);
@@ -236,7 +236,7 @@ void calculateDistante(unsigned long elapsedtime){
 void speedManager(int currentSpeed){
     /* Emergency Stop Signal */
     unsigned long elapsedTime = millis() - last_millis;
-    unsigned long deceleration = (lastSpeed - currentSpeed)/(elapsedTime*1000);
+    unsigned long deceleration = (currentSpeed - lastSpeed)/(elapsedTime*1000);
     lastSpeed = currentSpeed; 
     if (digitalRead(breakLight) == HIGH && deceleration > 28){
       pulsePinOnce(RL3,500);

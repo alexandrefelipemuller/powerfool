@@ -154,10 +154,10 @@ void loop()
     Menu();
 
   #ifdef BUILD_DISPLAY
-  //if (digitalRead(setButton) == LOW)
-  //  setMenu();
-  //if (digitalRead(menuButton) == LOW)
-  //  changeMenu();
+  if (digitalRead(setButton) != LOW)
+    releaseSetButton();
+  if (digitalRead(menuButton) != LOW)
+    releaseMenuButton();
   #endif
   
   float volts = analogRead(voltageIn)*0.0197f;

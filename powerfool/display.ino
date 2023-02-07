@@ -121,8 +121,6 @@ void padNumber(unsigned char number){
 
 void refreshMenu(inputFreq injectorInput, inputFreq speedInput, float consumption, float volts, int sensorPressureVal) {
   int rpm = injectorInput.freq*60*((settings & 2 == 0)*2);
-  //lcd.clear();
-  lcd.setCursor(0,0);
   switch (currentMenu)
   {
     case 1:
@@ -144,4 +142,9 @@ void refreshMenu(inputFreq injectorInput, inputFreq speedInput, float consumptio
       currentMenu = 0;
       menu0();
   }
+}
+
+void clearDisplay(){
+  lcd.clear();
+  lcd.setCursor(0,0);
 }

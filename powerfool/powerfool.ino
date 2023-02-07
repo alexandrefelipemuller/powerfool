@@ -78,8 +78,8 @@ void setup()
   pinMode(menuButton,INPUT_PULLUP);
   
   #ifdef BUILD_DISPLAY
-  attachInterrupt(digitalPinToInterrupt(setButton), setMenu, CHANGE);  
-  attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(setButton), setMenu, FALLING);  
+  attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, FALLING);
   #endif
   pulsePinOnce(beep,500);
   pulse_pin[0]=consume_pin;

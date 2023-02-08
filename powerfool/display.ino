@@ -39,6 +39,9 @@ void setMenu() {
         if (tank > 60000)
           tank=0;
         tank+=5000;
+      case 6:
+        is2step = true;
+        break;
       default:
         break;
     }
@@ -127,6 +130,21 @@ void menu4(){
     printSpace();
   }
 
+  void menu6(int rpm){
+    lcd.print(rpm);
+    padNumber(rpm);
+    lcd.print(F(" rpm"));
+    printSpace();
+    lcd.setCursor(0,1);
+    if (setButtonPressed)
+      lcd.print("Hold...");
+    else{
+      lcd.print("Go!");
+      is2step = false;
+    }
+    printSpace();
+  }
+
 void printTime(unsigned long lTime){
     lcd.print((unsigned int)(lTime/60000));
     lcd.print(":");
@@ -166,6 +184,9 @@ void refreshMenu(inputFreq injectorInput, inputFreq speedInput, float consumptio
       break;
     case 5:
       menu5();
+      break;
+    case 6:
+      menu6(rpm);
       break;
     default:
       currentMenu = 0;

@@ -46,6 +46,7 @@ int pulse_pin[n_saidas_pulso] = {-1,-1,-1};
 int correction_drift[n_saidas_pulso] = {0,0,0}; 
 
 bool diagnostic_mode = false;
+bool is2step = false;
 
 unsigned long last_millis, totalMileage, tripA;
 unsigned int rpmLimit, rpmAlert, minPressure, speedSensor, settings;
@@ -202,6 +203,7 @@ void loop()
   
   /* Alerts */
   int rpm = injectorInput.freq*60*(((settings & 2 == 0)+1)*2);
+  twoStep(rpm);
   int sensorPressureVal = alertsManager(rpm);
 
   if (diagnostic_mode){
@@ -266,6 +268,13 @@ void speedManager(int currentSpeed){
       speedBeep=false;
     }
   }
+}
+
+void twoStep(int rpm){
+  if (is2step && rpm > 3000)
+    digitalWrite(RL3,LOW);
+  else
+    digitalWrite(RL3,HIGH);
 }
 
 int alertsManager(int rpm){

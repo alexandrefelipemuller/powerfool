@@ -47,6 +47,7 @@ int correction_drift[n_saidas_pulso] = {0,0,0};
 
 bool diagnostic_mode = false;
 bool is2step = false;
+unsigned int rpm2Step;
 
 unsigned long last_millis, totalMileage, tripA;
 unsigned int rpmLimit, rpmAlert, minPressure, speedSensor, settings;
@@ -115,6 +116,7 @@ void loadMemoryValues(){
     EEPROM.put(17,(char)0);
     EEPROM.put(18,(int)0);
     EEPROM.put(20,(int)20000);
+    EEPROM.put(22,(int)0);
   } 
   //Load values
   EEPROM.get(0,correction_drift[0]);
@@ -128,6 +130,7 @@ void loadMemoryValues(){
   EEPROM.get(18,settings);
   EEPROM.get(17,doorLockspd);
   EEPROM.get(20,tank);
+  EEPROM.get(22,rpm2Step);
 }
 
 #ifdef is_ESP32
@@ -271,10 +274,11 @@ void speedManager(int currentSpeed){
 }
 
 void twoStep(int rpm){
-  if (is2step && rpm > 3000)
-    digitalWrite(RL3,LOW);
-  else
-    digitalWrite(RL3,HIGH);
+  if (rpm2Step > 0)
+    if (is2step && rpm > rpm2Step)
+      digitalWrite(RL3,LOW);
+    else
+      digitalWrite(RL3,HIGH);
 }
 
 int alertsManager(int rpm){

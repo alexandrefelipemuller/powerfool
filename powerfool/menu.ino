@@ -23,7 +23,8 @@
 *     1 - injection sequential/semi
 *     
 *     
-* 20 = fuel tank (1 byte)
+* 20 = fuel tank (2 bytes)
+* 22 = rpm 2step (2 bytes)
 */
 
 #ifdef is_ESP32
@@ -239,6 +240,7 @@ void subMenu_e(){
     Serial.println(F("3 Pressao minima sensor (1000 = 1 bar)"));
     Serial.println(F("4 Aviso velocidade excedida em km/h"));
     Serial.print(F("5 Mudar tipo aviso velocidade excedida, beep:"));    
+    Serial.print(F("7 Rotacao do corte 2step (0 = desabilitado)"));    
     if (settings%2 == 0)
       Serial.println(F(" (continuo)")); 
     else
@@ -254,6 +256,7 @@ void subMenu_e(){
             case '4': typev = UCHAR; subMenu_num(16,false,typev); break;
             case '5': settingsChange(0); break;
             //case '6': typev = UCHAR; subMenu_num(17,false,typev); break;
+            case '7': subMenu_num(22,false,typev); break;
             case 27: return;
             default: continue;  // includes the case 'no input'
         }

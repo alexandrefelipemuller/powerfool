@@ -84,7 +84,7 @@ void menu2(float out_freq, float consumption){
 
 void menu3(){
   lcd.print(("Temp.:"));
-  char temp1 = 106-(analogRead(sensorTemp)/7.7f);
+  int temp1 = 106-(analogRead(sensorTemp)/7.7f);
   lcd.print(temp1);
   lcd.write(0);
   lcd.print(("C "));

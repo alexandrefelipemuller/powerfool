@@ -253,7 +253,7 @@ void subMenu_e(){
             case '3': subMenu_num(12,false,typev); break;
             case '4': typev = UCHAR; subMenu_num(16,false,typev); break;
             case '5': settingsChange(0); break;
-            //case '6': typev = UCHAR; subMenu_num(17,false,typev); break;
+            case '6': typev = UCHAR; subMenu_num(17,false,typev); break;
             case 27: return;
             default: continue;  // includes the case 'no input'
         }

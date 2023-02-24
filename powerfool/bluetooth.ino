@@ -10,10 +10,12 @@ void sendBluetooth(inputFreq injectorInput, inputFreq speedInput, float volts, i
 
   // build 1st CAN frame, RPM, VOLTS, SPEED, SENSOR
   unsigned int rpm = (int)(injectorInput.freq * 60 *((settings & 2 == 0)*2) );
+  unsigned int voltage = volts*10;
+  unsigned int speed =  (unsigned char) (speedInput.freq/((float) (speedSensor/3600.0f)));
   memcpy(buf, &rpm, 2);
-  memcpy(buf + 2, 0, 2);
-  memcpy(buf + 4, 0, 2);
-  memcpy(buf + 6, 0, 2);
+  memcpy(buf + 2, &voltage, 2);
+  memcpy(buf + 4, &speed, 2);
+  memcpy(buf + 6, &sensorPressureVal, 2);
 
   // write first CAN frame to serial
   SendCANFrameToSerial(3200, buf);

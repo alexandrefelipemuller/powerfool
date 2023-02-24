@@ -9,3 +9,4 @@ void timerLoop();
 void pulsePinOnce(unsigned char pin, unsigned long ms);
 void setOutFrequency(float baseFreq, int num);
 void readFrequency(int pin, char samples, inputFreq *returnedValues);
+void readValuesFromCan(inputFreq *injectorInput, inputFreq *speedInput, float *volts);

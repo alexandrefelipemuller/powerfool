@@ -21,7 +21,7 @@
 * 18 = Settings binary array (2 bytes)
 *     0 - speed beep type
 *     1 - injection sequential/semi
-*     
+*     2 - master or slave in can
 *     
 * 20 = fuel tank (1 byte)
 */
@@ -267,11 +267,17 @@ void subMenu_a(){
     Serial.println(F("1 Leitura sensor de velocidade"));
     Serial.println(F("2 Saida sinal de velocidade"));
     Serial.println(F("3 Saida sinal de consumo"));
-        Serial.print(F("4 Mudar leitura tipo injeção:"));    
+    Serial.print(F("4 Mudar leitura tipo injeção:"));    
     if (settings ^ 2 > 0)
       Serial.println(F(" (sequencial)")); 
     else
       Serial.println(F(" (semisequencial)")); 
+    Serial.print(F("5 Modo na rede CAN interna:"));    
+    if (settings & 4 > 0)
+      Serial.println(F(" (master)")); 
+    else
+      Serial.println(F(" (slave)")); 
+
     Serial.println(F("ESC Voltar"));
     varType typev = INT;
     for (;;) {
@@ -280,6 +286,7 @@ void subMenu_a(){
             case '2':  subMenu_num(2,true,typev); break;
             case '3':  subMenu_num(0,true,typev); break;
             case '4':  settingsChange(1); break;
+            case '5':  settingsChange(2); break;
             case 27: return;
             default: continue;  // includes the case 'no input'
         }

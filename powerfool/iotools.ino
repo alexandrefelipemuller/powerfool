@@ -1,4 +1,23 @@
 
+void readValuesFromCan(inputFreq *injectorInput, inputFreq *speedInput, float *volts){
+  if (BTSerial.available() >= 0) {
+    const int BUFFER_SIZE = 8;
+    uint8_t buffer[BUFFER_SIZE];
+    uint8_t signature[8];
+    BTSerial.readBytes(signature, 8);
+    if (signature[0] == 0xC4 && signature[1] == 0x33 && signature[2] == 0x22 && signature[3] == 0x11) {
+      BTSerial.readBytes(buffer, BUFFER_SIZE);
+      // Interpretação dos valores de RPM, Volts e Speed
+      unsigned int rpm = *((unsigned int*)&buffer[0]);
+      *volts = (*((unsigned int*)&buffer[2]))/10.0;
+      unsigned int speed = *((unsigned int*)&buffer[4]);
+
+      (*injectorInput).freq = (rpm/60)/(((settings & 2 == 0)+1)*2);   
+      (*speedInput).freq = speed*((float) (speedSensor/3600.0f));
+    }
+  }
+}
+
 void readFrequency(int pin, char samples, inputFreq *returnedValues){
   (*returnedValues).offtime = 0.0; 
   (*returnedValues).ontime = 0.0; 

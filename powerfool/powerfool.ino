@@ -159,22 +159,23 @@ void loop()
   if (digitalRead(menuButton) != LOW)
     releaseMenuButton();
   #endif
-  
-  float volts = analogRead(voltageIn)*0.0197f;
-  
-  inputFreq injectorInput, speedInput;
-  readFrequency(injector_pin, 2, &injectorInput);
-  float duty;
-  if ((float)(injectorInput.period) == 0.0f)
-    duty=0.0;
-  else
-    duty = (float)injectorInput.offtime/(float)(injectorInput.period); 
-   
-  float vazao = injetor * (0.126); // result in ml/s 
-  float consumption = injectorInput.freq*vazao*duty;
 
-  readFrequency(speed_in_pin, 4, &speedInput);
-  
+  inputFreq injectorInput, speedInput;
+  float volts, vazao, consumption, duty = 0.0;
+  if (settings & 4 == 0) { /*if Slave*/
+    readValuesFromCan(&injectorInput, &speedInput, &volts);
+  }else{
+    volts = analogRead(voltageIn)*0.0197f;
+    readFrequency(injector_pin, 2, &injectorInput);
+    if (!(float)(injectorInput.period) == 0.0f)
+      duty=(float)injectorInput.offtime/(float)(injectorInput.period); 
+    
+    vazao = injetor * (0.126); // result in ml/s 
+    consumption = injectorInput.freq*vazao*duty;
+
+    readFrequency(speed_in_pin, 4, &speedInput);
+  }
+
   #ifndef is_TEST  
     if (injectorInput.period == 0.0)
       setOutFrequency(0.0,0);  

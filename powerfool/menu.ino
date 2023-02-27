@@ -86,7 +86,7 @@ void Menu() {
 }
 /* Prompt user and store a numerical parameter */
 /* Params: memory position, min and max values */
-void subMenu_range(int position, char min, char max){
+void subMenu_range(unsigned char position, char min, char max){
   int value;
   EEPROM.get(position,value);
   Serial.println("");
@@ -101,12 +101,14 @@ void subMenu_range(int position, char min, char max){
               value++;
               if (value >= max)
                 value=min;
+              Serial.print(F("*** Novo valor: "));
               Serial.println(pinToName(value));
   		        break;
             case '-':
               value--;
               if (value <= min)
                 value=max;
+              Serial.print(F("*** Novo valor: "));
               Serial.println(pinToName(value));
               break;
             case 's': 

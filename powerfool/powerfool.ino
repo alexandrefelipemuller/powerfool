@@ -103,7 +103,7 @@ void setup()
 }
 
 void loadMemoryValues(){
-  if (EEPROM.read(0) != 255){
+  if (EEPROM.read(0) == 255){
     //First boot, clear memory, those are default values
     EEPROM.put(0,(int)0);
     EEPROM.put(2,(int)0);

@@ -72,8 +72,10 @@ void Menu() {
             case '2': subMenu_e(); break;
             case '3': diagnostic_mode=true; break;
             case '4': Serial.println(F("bye...")); Serial.end();
-            case '5': subMenu_p();
-            case '9': resetFunc();
+            case '5': subMenu_p(); break;
+            case '9': 
+                      resetFunc();
+                      break;
             #ifdef is_TEST  
             case '6': testReport();
             #endif
@@ -352,6 +354,8 @@ char* pinToName(int pin){
       return "DI1";
     case DI2:
       return "DI2";
+    case DI3:
+      return "DI3";
     default:
     return "";
   }
@@ -359,6 +363,7 @@ char* pinToName(int pin){
 
 void subMenu_p(){
     clearScreen();
+    loadMemoryValues();
     printBannerMsg("Entradas e saidas");
     Serial.println(F("Select one of the following options:"));
     Serial.print(F("1 Saida alerta Pressao:"));
@@ -367,11 +372,11 @@ void subMenu_p(){
     Serial.println(pinToName(RL_DL));
     Serial.print(F("3 Saida pisca alerta:"));
     Serial.println(pinToName(RL_HZ));
-    Serial.print(F("4 Sinal bico injetor:"));    
+    Serial.print(F("4 Entrada bico injetor:"));    
     Serial.println(pinToName(injector_pin));
-    Serial.print(F("5 Sinal velocidade da roda:")); 
+    Serial.print(F("5 Entrada velocidade da roda:")); 
     Serial.println(pinToName(speed_in_pin));
-    Serial.print(F("6 Sinal de luz de freio:")); 
+    Serial.print(F("6 Entrada luz de freio:")); 
     Serial.println(pinToName(breakLight));
     Serial.println(F("ESC Voltar"));
     varType typev = UCHAR;

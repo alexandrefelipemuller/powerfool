@@ -219,7 +219,7 @@ void loop()
   last_millis = millis();
   
   /* Alerts */
-  int rpm = injectorInput.freq*60*(((settings & 2 == 0)+1)*2);
+  int rpm = calculateRpm(injectorInput.freq);
   int sensorPressureVal = alertsManager(rpm);
 
   if (diagnostic_mode){
@@ -306,6 +306,9 @@ int alertsManager(int rpm){
   return sensorPressureVal;
 }
 
+int calculateRpm(float freq){
+ return freq*60*(((settings & 2 == 0)+1)*2);
+}
 
 /* This timer runs 3k times a second and verify if need to change state of any pulse output
  */

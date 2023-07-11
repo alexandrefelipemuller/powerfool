@@ -14,6 +14,7 @@ void changeMenu() {
   {
     currentMenu++;
     menuButtonPressed = true;
+    EEPROM.put(28, (unsigned char) currentMenu);
   }
 }
 

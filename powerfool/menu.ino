@@ -30,7 +30,9 @@
 * 25 = speed input port (1 byte)
 * 26 = injector input port (1 byte)
 * 27 = break light input port (1 byte)
-* 28 = Menu position on lcd
+* 28 = Menu position on lcd (1 byte)
+* 29 = tripA (4 bytes)
+* 33 = ...
 */
 
 #ifdef is_ESP32

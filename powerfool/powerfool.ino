@@ -189,7 +189,7 @@ void loop()
     duty = (float)injectorInput.offtime/(float)(injectorInput.period); 
    
   float vazao = injetor * (0.126); // result in ml/s 
-  float consumption = injectorInput.freq*vazao*duty;
+  float consumption = out_freq[0]*vazao*duty;
 
   readFrequency(speed_in_pin, 4, &speedInput);
   

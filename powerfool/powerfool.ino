@@ -145,6 +145,7 @@ void loadMemoryValues(){
   EEPROM.get(27,breakLight);
   EEPROM.get(28,speed_out_pin);
   EEPROM.get(29,consume_pin);
+  EEPROM.get(31, tripA);
 }
 
 #ifdef is_ESP32
@@ -248,6 +249,7 @@ void calculateDistante(unsigned long elapsedtime){
     totalMileage += odometer;
     odometer = 0.0;
     EEPROM.put(4, totalMileage);
+    EEPROM.put(31, tripA);
   }
 }
 

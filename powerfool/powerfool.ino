@@ -21,14 +21,14 @@ SoftwareSerial BTSerial (7,8);
 #define setButton 2
 #define menuButton 3
 #define beep 4
-#define speed_in_pin 5
-#define injector_pin 6
+#define DI2 5
+#define DI1 6
+#define DI3 A0
 #define RL3 9
 #define RL2 10
 #define RL1 11
-#define speed_out_pin 12
-#define consume_pin 13
-#define breakLight A0
+#define DO1 12
+#define DO2 13
 #define voltageIn A1 // internal
 #define sensorPressure A2
 #define intakeAirTemp A3
@@ -57,20 +57,23 @@ float odometer = 0;
 float fuel = 0;
 unsigned int tank;
 unsigned char doorLockspd;
+
+unsigned char RL_P, RL_DL, RL_HZ, speed_in_pin, injector_pin, breakLight, speed_out_pin, consume_pin;
+
 void setup()
 {
   Serial.begin(9600);
-  pinMode(injector_pin,INPUT);
-  pinMode(speed_in_pin,INPUT_PULLUP);
-  pinMode(breakLight,INPUT);
+  pinMode(DI1,INPUT);
+  pinMode(DI2,INPUT_PULLUP);
+  pinMode(DI3,INPUT);
   pinMode(voltageIn, INPUT);
   pinMode(sensorPressure,INPUT);
   pinMode(sensorPressure2, INPUT);
   pinMode(intakeAirTemp,INPUT);
   pinMode(sensorTemp,INPUT);
   pinMode(beep, OUTPUT);
-  pinMode(consume_pin,OUTPUT);
-  pinMode(speed_out_pin,OUTPUT);
+  pinMode(DO2,OUTPUT);
+  pinMode(DO1,OUTPUT);
   pinMode(RL1,OUTPUT);
   pinMode(RL2,OUTPUT);
   pinMode(RL3,OUTPUT);
@@ -78,16 +81,14 @@ void setup()
   pinMode(menuButton,INPUT_PULLUP);
   
   #ifdef BUILD_DISPLAY
-  attachInterrupt(digitalPinToInterrupt(setButton), setMenu, FALLING);  
-  attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, FALLING);
+  attachInterrupt(digitalPinToInterrupt(setButton), setMenu, RISING);  
+  attachInterrupt(digitalPinToInterrupt(menuButton), changeMenu, RISING);
   #endif
-  pulsePinOnce(beep,500);
   pulse_pin[0]=consume_pin;
   pulse_pin[1]=speed_out_pin;
   pulse_pin[2]=beep;
   
   loadMemoryValues();
-  
   setupTimer1(); 
 
   #ifdef BUILD_DISPLAY
@@ -98,11 +99,12 @@ void setup()
   #ifdef BUILD_BLUETOOTH
     BTSerial.begin(9600);
   #endif
+   pulsePinOnce(beep,500);
 }
 
 void loadMemoryValues(){
-    if (EEPROM.read(0) == 255){
-    //First boot, clear memory
+  if (EEPROM.read(0) == 255){
+    //First boot, clear memory, those are default values
     EEPROM.put(0,(int)0);
     EEPROM.put(2,(int)0);
     EEPROM.put(4,(long)0);
@@ -114,6 +116,14 @@ void loadMemoryValues(){
     EEPROM.put(17,(char)0);
     EEPROM.put(18,(int)0);
     EEPROM.put(20,(int)20000);
+    EEPROM.put(22,(char)RL1);
+    EEPROM.put(23,(char)RL2);
+    EEPROM.put(24,(char)RL3);
+    EEPROM.put(25,(char)DI2);
+    EEPROM.put(26,(char)DI1);
+    EEPROM.put(27,(char)DI3);
+    EEPROM.put(28,(char)DO1);
+    EEPROM.put(29,(char)DO2);
   } 
   //Load values
   EEPROM.get(0,correction_drift[0]);
@@ -127,6 +137,14 @@ void loadMemoryValues(){
   EEPROM.get(18,settings);
   EEPROM.get(17,doorLockspd);
   EEPROM.get(20,tank);
+  EEPROM.get(22,RL_P);
+  EEPROM.get(23,RL_DL);
+  EEPROM.get(24,RL_HZ);
+  EEPROM.get(25,speed_in_pin);
+  EEPROM.get(26,injector_pin);
+  EEPROM.get(27,breakLight);
+  EEPROM.get(28,speed_out_pin);
+  EEPROM.get(29,consume_pin);
 }
 
 #ifdef is_ESP32
@@ -239,12 +257,12 @@ void speedManager(int currentSpeed){
     unsigned long deceleration = (currentSpeed - lastSpeed)/(elapsedTime*1000);
     lastSpeed = currentSpeed; 
     if (digitalRead(breakLight) == HIGH && deceleration > 28){
-      pulsePinOnce(RL3,500);
+      pulsePinOnce(RL_HZ,500);
     }
 
     /* door lock */
     if (doorLockspd > 0 && !doorLocked && currentSpeed > doorLockspd){
-      pulsePinOnce(RL2,300);
+      pulsePinOnce(RL_DL,300);
       doorLocked=true;
     }
     
@@ -282,7 +300,7 @@ int alertsManager(int rpm){
   }
   int sensorPressureVal = map(analogRead(A2), 204, 1024, 0, 10000);
   if (rpmAlert > 0 && rpm > rpmAlert && sensorPressureVal < minPressure){
-    digitalWrite(RL1,HIGH);
+    digitalWrite(RL_P,HIGH);
     setOutFrequency(3,2);
   }
   return sensorPressureVal;

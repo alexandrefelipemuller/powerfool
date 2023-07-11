@@ -23,7 +23,13 @@
 *     1 - injection sequential/semi
 *     
 *     
-* 20 = fuel tank (1 byte)
+* 20 = fuel tank (2 bytes)
+* 22 = oil pressure waring relay port (1 byte)
+* 23 = Door lock relay port (1 byte)
+* 24 = Hazard lights relay port (1 byte)
+* 25 = speed input port (1 byte)
+* 26 = injector input port (1 byte)
+* 27 = break light input port (1 byte)
 */
 
 #ifdef is_ESP32
@@ -52,7 +58,8 @@ void Menu() {
   Serial.println(F("2 Funcoes especiais"));
   Serial.println(F("3 Modo diagnostico"));
   Serial.println(F("4 Sair do menu"));
-  Serial.println(F("5 Reboot"));
+    Serial.println(F("5 Entradas e saidas"));
+  Serial.println(F("9 Reboot"));
   #ifdef is_TEST  
     Serial.println(F("6 Relatorio de teste"));
   #endif
@@ -65,7 +72,10 @@ void Menu() {
             case '2': subMenu_e(); break;
             case '3': diagnostic_mode=true; break;
             case '4': Serial.println(F("bye...")); Serial.end();
-            case '5': resetFunc();
+            case '5': subMenu_p(); break;
+            case '9': 
+                      resetFunc();
+                      break;
             #ifdef is_TEST  
             case '6': testReport();
             #endif
@@ -76,9 +86,51 @@ void Menu() {
       break;
     }
 }
+/* Prompt user and store a numerical parameter */
+/* Params: memory position, min and max values */
+void subMenu_range(unsigned char position, char min, char max){
+  if (min > max){
+    int temp = max;
+    max=min;
+    min = temp;
+  }
+  unsigned char value;
+  EEPROM.get(position,value);
+  Serial.println("");
+  Serial.print(F("*** Valor em memoria: "));
+  Serial.println(pinToName(value));
+  Serial.println(F("+ Proximo"));
+  Serial.println(F("- Anterior"));
+  Serial.println(F("s Sair do menu"));
+    for (;;) {
+        switch (Serial.read()) {
+            case '+':
+              value++;
+              if (value > max)
+                value=min;
+              Serial.print(F("*** Novo valor: "));
+              Serial.println(pinToName(value));
+  		        break;
+            case '-':
+              value--;
+              if (value < min)
+                value=max;
+              Serial.print(F("*** Novo valor: "));
+              Serial.println(pinToName(value));
+              break;
+            case 's': 
+            case 'S': 
+                Serial.println("Salvando valor...");
+                Serial.println(value);
+                EEPROM.put(position, (unsigned char) value);
+                return;
+            default: continue;  // includes the case 'no input'
+        }
+    }
+}
 
-
-/* Prompt user and store a numerical parameter */  
+/* Prompt user and store a numerical parameter */
+/* Params: memory position, if is percentage, and data type */
 void subMenu_num(int position, bool isPercent, varType t){
   unsigned char step;
   int value;
@@ -232,6 +284,7 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
       diagnostic_mode = false;
 }
 void subMenu_e(){
+    clearScreen();
     printBannerMsg("Special features");
     Serial.println(F("Select one of the following options:"));
     Serial.println(F("1 Shift Beep"));
@@ -262,6 +315,7 @@ void subMenu_e(){
     }
 }
 void subMenu_a(){
+    clearScreen();
     printBannerMsg("Ajustes");
     Serial.println(F("Select one of the following options:"));
     Serial.println(F("1 Leitura sensor de velocidade"));
@@ -284,6 +338,60 @@ void subMenu_a(){
             default: continue;  // includes the case 'no input'
         }
         subMenu_a();
+        break;
+    }
+}
+
+char* pinToName(int pin){
+  switch (pin){
+    case RL1:
+      return "RL1";
+    case RL2:
+      return "RL2";
+    case RL3:
+      return "RL3";
+    case DI1:
+      return "DI1";
+    case DI2:
+      return "DI2";
+    case DI3:
+      return "DI3";
+    default:
+    return "";
+  }
+}
+
+void subMenu_p(){
+    clearScreen();
+    loadMemoryValues();
+    printBannerMsg("Entradas e saidas");
+    Serial.println(F("Select one of the following options:"));
+    Serial.print(F("1 Saida alerta Pressao:"));
+    Serial.println(pinToName(RL_P));
+    Serial.print(F("2 Saida travamento portas:"));
+    Serial.println(pinToName(RL_DL));
+    Serial.print(F("3 Saida pisca alerta:"));
+    Serial.println(pinToName(RL_HZ));
+    Serial.print(F("4 Entrada bico injetor:"));    
+    Serial.println(pinToName(injector_pin));
+    Serial.print(F("5 Entrada velocidade da roda:")); 
+    Serial.println(pinToName(speed_in_pin));
+    Serial.print(F("6 Entrada luz de freio:")); 
+    Serial.println(pinToName(breakLight));
+    Serial.println(F("ESC Voltar"));
+    varType typev = UCHAR;
+    for (;;) {
+        switch (Serial.read()) {
+            case '1':  subMenu_range(22, RL3, RL1); break;
+            case '2':  subMenu_range(23, RL3, RL1); break;
+            case '3':  subMenu_range(24, RL3, RL1); break;
+            case '4':  subMenu_range(25, DI2, DI1); break;
+            case '5':  subMenu_range(26, DI2, DI1); break;
+            case '6':  subMenu_range(27, DI2, DI3); break;
+            case 27: return;
+            default: continue;  // includes the case 'no input'
+        }
+        Menu();
         break;
     }
 }

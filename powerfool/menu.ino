@@ -278,7 +278,7 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print(volts);
     Serial.println(F(" v"));
     Serial.print(F("RPM: "));
-    Serial.println((int)(injectorInput.freq * 60 *((settings ^ 2 > 0)+1)*2)); // semi, sequential
+    Serial.println(calculateRpm(injectorInput.freq)); // semi, sequential
 
     Serial.println(F("Pressione ESC para sair"));
     if (Serial.read() == 27)

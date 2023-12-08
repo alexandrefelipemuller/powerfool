@@ -27,7 +27,7 @@ Please contact autor and use Wiki here no Github
 Diagram
 ---------------
 ![](https://github.com/alexandrefelipemuller/powerfool/blob/main/diagrams/Schematic_Modulo%20AutoDuino_2023-01-04.png?raw=true)
-A better explanation here: [Schematic Overview](Schematic)
+A better explanation here: [Schematic Overview](Schematic.md)
 
 # Understanding the Arduino Code for Vehicle Monitoring
 

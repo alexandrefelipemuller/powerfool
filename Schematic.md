@@ -29,8 +29,8 @@ The schematic represents a simple electronic circuit, potentially for a vehicle'
 ## Relays Output
 - Several relays (`D9`, `D10`, `D11`) are connected, which are controlled by transistors (`BC337`). These relays likely switch higher power loads.
 
-## 5V Input
-- A separate input for 5V is indicated, which might be used for powering logic level components or sensors.
+## 5V Output
+- A separate output for 5V is indicated, which might be used for sensors
 
 ---
 

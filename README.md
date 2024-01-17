@@ -68,9 +68,57 @@ This Arduino sketch (a term for an Arduino program) is designed for a vehicle or
 - `setup()`: A function that runs once when the Arduino is powered on. It's used to initialize I/O pins and set up communication.
 - `loop()`: This function runs repeatedly, forming the main part of the program. It reads sensors, calculates values, and responds to changes.
 - Functions: These are blocks of code that perform specific tasks, like `calculateDistance()` or `alertsManager()`, and can be called whenever those particular tasks need to be performed.
+  
+### Powerfool Project Architecture
+
+This document outlines the proposed software architecture for the Powerfool project. The architecture is designed to enhance modularity, clarity, and ease of maintenance.
+
+#### 1. Core Application
+- **File**: `powerfool.ino`
+- **Description**: The main entry point of the application. It initializes the system, manages the main loop, and coordinates high-level application flow.
+- **Responsibilities**:
+  - System Initialization
+  - Main Loop Control
+  - High-Level State Management
+
+#### 2. Communication Module
+- **Files**: `bluetooth.ino`, `bluetooth.h`
+- **Description**: Handles all Bluetooth-related functionalities.
+- **Responsibilities**:
+  - Bluetooth Connection Management
+  - Data Transmission and Reception
+  - Error Handling in Communication
+
+#### 3. Display Module
+- **Files**: `display.ino`, `display.h`
+- **Description**: Manages the user interface on the display.
+- **Responsibilities**:
+  - Rendering UI Elements
+  - Displaying Status and Notifications
+  - Handling Screen Refresh and Updates
+
+#### 4. Input/Output Tools
+- **Files**: `iotools.ino`, `iotools.h`
+- **Description**: Manages input/output operations, including reading sensors or interfacing with other hardware components.
+- **Responsibilities**:
+  - Sensor Data Acquisition
+  - Actuator Control
+  - Input Processing
+
+#### 5. Menu System
+- **Files**: `menu.ino`, `menu.h`
+- **Description**: Handles the menu interface for user interactions.
+- **Responsibilities**:
+  - Menu Navigation
+  - User Input Handling
+  - Menu-related Display Updates
+
+#### Additional Recommendations
+- **Configuration File**: `config.h` file for all global settings and constants.
 
 ### EEPROM Memory:
 - The EEPROM is a type of memory that retains its contents even when the power is turned off. It's used here to store important values like total mileage and settings.
+- See in menu.ino the description of the main memory
 
 ### Arduino Pins:
 - Pins are the points on the Arduino board where you connect sensors and actuators. In the code, `A0`, `A1`, etc., refer to analog input pins, and numbers like `10`, `11`, `12` refer to digital I/O pins.

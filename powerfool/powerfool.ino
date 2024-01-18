@@ -6,6 +6,7 @@
 #include <EEPROM.h>
 #include "menu.h" 
 #include "iotools.h"
+#include "memutils.h"
 //DISPLAY
 #include "display.h"
 #include <Wire.h>
@@ -14,7 +15,7 @@ LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars
 //BLUETOOTH
 #include "bluetooth.h"
 #include <SoftwareSerial.h>
-SoftwareSerial BTSerial (7,8);
+SoftwareSerial BTSerial (8,9);
 
 #define timer_freq 3000
 
@@ -24,7 +25,7 @@ SoftwareSerial BTSerial (7,8);
 #define DI2 5
 #define DI1 6
 #define DI3 A0
-#define RL3 9
+#define RL3 7
 #define RL2 10
 #define RL1 11
 #define DO1 12
@@ -58,7 +59,9 @@ float fuel = 0;
 unsigned int tank;
 unsigned char doorLockspd;
 
-unsigned char RL_P, RL_DL, RL_HZ, speed_in_pin, injector_pin, breakLight, speed_out_pin, consume_pin;
+unsigned char RL_P, RL_DL, RL_HZ, speed_in_pin, injector_pin, breakLight;
+unsigned char consume_pin = DO1;
+unsigned char speed_out_pin = DO2;
 
 void setup()
 {
@@ -100,51 +103,6 @@ void setup()
     BTSerial.begin(9600);
   #endif
    pulsePinOnce(beep,500);
-}
-
-void loadMemoryValues(){
-  if (EEPROM.read(0) == 255){
-    //First boot, clear memory, those are default values
-    EEPROM.put(0,(int)0);
-    EEPROM.put(2,(int)0);
-    EEPROM.put(4,(long)0);
-    EEPROM.put(8,(int)0);
-    EEPROM.put(10,(int)0);
-    EEPROM.put(12,(int)0);
-    EEPROM.put(14,(int)4860);
-    EEPROM.put(16,(char)0);
-    EEPROM.put(17,(char)0);
-    EEPROM.put(18,(int)0);
-    EEPROM.put(20,(int)20000);
-    EEPROM.put(22,(char)RL1);
-    EEPROM.put(23,(char)RL2);
-    EEPROM.put(24,(char)RL3);
-    EEPROM.put(25,(char)DI2);
-    EEPROM.put(26,(char)DI1);
-    EEPROM.put(27,(char)DI3);
-    EEPROM.put(28,(char)DO1);
-    EEPROM.put(29,(char)DO2);
-  } 
-  //Load values
-  EEPROM.get(0,correction_drift[0]);
-  EEPROM.get(2,correction_drift[1]);
-  EEPROM.get(4,totalMileage);
-  EEPROM.get(8,rpmLimit);
-  EEPROM.get(10,rpmAlert);
-  EEPROM.get(12,minPressure);
-  EEPROM.get(14,speedSensor);
-  EEPROM.get(16,speedLimit);
-  EEPROM.get(18,settings);
-  EEPROM.get(17,doorLockspd);
-  EEPROM.get(20,tank);
-  EEPROM.get(22,RL_P);
-  EEPROM.get(23,RL_DL);
-  EEPROM.get(24,RL_HZ);
-  EEPROM.get(25,speed_in_pin);
-  EEPROM.get(26,injector_pin);
-  EEPROM.get(27,breakLight);
-  EEPROM.get(28,speed_out_pin);
-  EEPROM.get(29,consume_pin);
 }
 
 #ifdef is_ESP32
@@ -207,7 +165,8 @@ void loop()
    //Calculate distance and consumed fuel
    calculateDistante(millis() - last_millis);
   #else
-    pinMode(injector_pin,INPUT_PULLUP );
+    pinMode(injector_pin,INPUT_PULLUP);
+    pinMode(speed_in_pin,INPUT_PULLUP);
     setOutFrequency(120.0f,0);
     setOutFrequency(120.0f,1); 
   #endif

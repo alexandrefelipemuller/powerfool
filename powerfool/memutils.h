@@ -1,0 +1,2 @@
+void setDefaultMemoryValues();
+void loadMemoryValues();

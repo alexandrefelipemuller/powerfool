@@ -177,7 +177,7 @@ void loop()
   
   last_millis = millis();
   
-  /* Alerts */
+  // Alerts
   int rpm = injectorInput.freq*60*(((settings & 2 == 0)+1)*2);
   int sensorPressureVal = alertsManager(rpm);
 
@@ -190,9 +190,9 @@ void loop()
     refreshMenu(injectorInput, speedInput, consumption, volts, sensorPressureVal);
   #endif
   #ifdef BUILD_BLUETOOTH
-    sendBluetooth(injectorInput, speedInput, volts, sensorPressureVal);
+    sendBluetooth(rpm, currentSpeed, volts, sensorPressureVal);
   #endif
-  delay(5);
+  delay(1);
 }
 void calculateDistante(unsigned long elapsedtime){
     fuel += (out_freq[0]/1000)*elapsedtime;

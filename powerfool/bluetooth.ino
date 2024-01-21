@@ -1,5 +1,5 @@
 #ifdef BUILD_BLUETOOTH
-void sendBluetooth(inputFreq injectorInput, inputFreq speedInput, float volts, int sensorPressureVal){
+void sendBluetooth(unsigned int rpm, int speed, float volts, int sensorPressureVal){
     byte buf[8];
 
   // build & send CAN frames to RealDash.
@@ -9,11 +9,11 @@ void sendBluetooth(inputFreq injectorInput, inputFreq speedInput, float volts, i
   // endianess of the values can be specified in XML file if it is required to use big endian values
 
   // build 1st CAN frame, RPM, VOLTS, SPEED, SENSOR
-  unsigned int rpm = (int)(injectorInput.freq * 60 *((settings & 2 == 0)*2) );
+  unsigned int voltage = (unsigned int) (volts*10);
   memcpy(buf, &rpm, 2);
-  memcpy(buf + 2, 0, 2);
-  memcpy(buf + 4, 0, 2);
-  memcpy(buf + 6, 0, 2);
+  memcpy(buf + 2, &voltage, 2);
+  memcpy(buf + 4, &speed, 2);
+  memcpy(buf + 6, &sensorPressureVal, 2);
 
   // write first CAN frame to serial
   SendCANFrameToSerial(3200, buf);

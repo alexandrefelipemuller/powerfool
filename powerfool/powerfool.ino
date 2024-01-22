@@ -199,7 +199,7 @@ void calculateDistante(unsigned long elapsedtime){
     if (fuel > 500.0){
     tank-=fuel;
     fuel=0.0;       
-    EEPROM.put(20, tank);
+    EEPROM.put(20, tank); 
     }
   odometer += (elapsedtime*out_freq[1])/((float) speedSensor); //meters
   if (odometer > 500.0){
@@ -207,6 +207,7 @@ void calculateDistante(unsigned long elapsedtime){
     totalMileage += odometer;
     odometer = 0.0;
     EEPROM.put(4, totalMileage);
+    EEPROM.put(31, tripA);
   }
 }
 

@@ -5,36 +5,7 @@
 #define F(s) (s)
 #endif
 /* 
-* Memory is just 200 bytes, so we have to safe it
-* instead of storing objects, we have to store just the essential
-* <memory position = value, meaning>
-* 0 = correction drift 0, consume (2 bytes)
-* 2 = correction drift 1, speed (2 bytes)
-* 4 = Total odometer (4 bytes)
-* 8 = Shift Beep (2 bytes)
-* 10 = rpm alert (2 bytes)
-* 12 = press sensor (2 bytes)
-* 14 = pulses per km, speed sensor (2 bytes)
-*   Old VW 1800, Renault 4860, VW Fox 5000, chevrolet 15200
-* 16 = speed limit (1 byte)
-* 17 = lock doors speed (1 byte)
-* 18 = Settings binary array (2 bytes)
-*     0 - speed beep type
-*     1 - injection sequential/semi
-*     
-*     
-* 20 = fuel tank (2 bytes)
-* 22 = oil pressure waring relay port (1 byte)
-* 23 = Door lock relay port (1 byte)
-* 24 = Hazard lights relay port (1 byte)
-* 25 = speed input port (1 byte)
-* 26 = injector input port (1 byte)
-* 27 = break light input port (1 byte)
-* 28 = speed out pin settings (1 byte)
-* 29 = consume pin settings  (1 byte)
-* 30 = Menu position on lcd (1 byte)
-* 31 = tripA (4 bytes)
-* 35 = ...
+* See memutils diagram of the memory usage
 */
 
 #ifdef is_ESP32
@@ -63,7 +34,8 @@ void Menu() {
   Serial.println(F("2 Funcoes especiais"));
   Serial.println(F("3 Modo diagnostico"));
   Serial.println(F("4 Sair do menu"));
-    Serial.println(F("5 Entradas e saidas"));
+  Serial.println(F("5 Entradas e saidas"));
+  Serial.println(F("7 Reset de fabrica"));
   Serial.println(F("9 Reboot"));
   #ifdef is_TEST  
     Serial.println(F("6 Relatorio de teste"));
@@ -78,11 +50,12 @@ void Menu() {
             case '3': diagnostic_mode=true; break;
             case '4': Serial.println(F("bye...")); Serial.end();
             case '5': subMenu_p(); break;
+            case '7': resetFab(); break;
             case '9': 
                       resetFunc();
                       break;
             #ifdef is_TEST  
-            case '6': testReport();
+            case '6': testReport(); break;
             #endif
 
             default: continue;  // includes the case 'no input'
@@ -245,6 +218,24 @@ void numberEntry(int value, int position, bool isPercent){
   Serial.println(F(", opcoes +, -, a, d ou s para sair e salvar"));
 }
 
+void resetFab(){
+  Serial.print(F("Deseja apagar tudo? (s/n)"));
+  for(;;){
+    switch (Serial.read()){
+    case 's':
+    case 'S':
+        setDefaultMemoryValues();
+        Serial.println(F("Memoria apagada."));
+        return;
+    case 'n':
+    case 'N':
+        Serial.println(F("Cancelando..."));
+        return;
+    }
+  }
+}
+
+
 float memValueToCorrection(int value){
   if (value > 0)  
     return float (value/81.9175f);
@@ -311,7 +302,7 @@ void subMenu_e(){
             case '3': subMenu_num(12,false,typev); break;
             case '4': typev = UCHAR; subMenu_num(16,false,typev); break;
             case '5': settingsChange(0); break;
-            case '6': typev = UCHAR; subMenu_num(17,false,typev); break;
+            //case '6': typev = UCHAR; subMenu_num(17,false,typev); break;
             case 27: return;
             default: continue;  // includes the case 'no input'
         }
@@ -390,8 +381,8 @@ void subMenu_p(){
             case '1':  subMenu_range(22, RL3, RL1); break;
             case '2':  subMenu_range(23, RL3, RL1); break;
             case '3':  subMenu_range(24, RL3, RL1); break;
-            case '4':  subMenu_range(25, DI2, DI1); break;
-            case '5':  subMenu_range(26, DI2, DI1); break;
+            case '4':  subMenu_range(26, DI2, DI1); break;
+            case '5':  subMenu_range(25, DI2, DI1); break;
             case '6':  subMenu_range(27, DI2, DI3); break;
             case 27: return;
             default: continue;  // includes the case 'no input'
@@ -411,16 +402,22 @@ void testReport(){
    readFrequency(injector_pin, 15, &dg1);
    readFrequency(speed_in_pin, 15, &dg2);
    Serial.print(F("Digital Input 1: "));
-   if (dg1.freq > 126.0f || dg1.freq <  114.0f)
+   if (dg1.freq > 126.0f || dg1.freq <  114.0f){
       Serial.println("Failed!");
+      Serial.print("DG1:");
+      Serial.println(dg1.freq);
+   }
    else{
       Serial.println("OK");
       Serial.print(F("Digital Output 1: "));
       Serial.println("OK");
    }
    Serial.print(F("Digital Input 2: "));
-   if (dg2.freq > 126.0f || dg2.freq <  114.0f)
+   if (dg2.freq > 126.0f || dg2.freq <  114.0f){
       Serial.println("Failed!");
+      Serial.print("DG2:");
+      Serial.println(dg2.freq);
+   }
    else{
       Serial.println("OK");
       Serial.print(F("Digital Output 2: "));

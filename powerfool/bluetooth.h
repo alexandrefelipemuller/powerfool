@@ -1,1 +1,1 @@
-void sendBluetooth(inputFreq injectorInput, inputFreq speedInput, float volts, int sensorPressureVal);
+void sendBluetooth(unsigned int rpm, int speed, float volts, int sensorPressureVal);

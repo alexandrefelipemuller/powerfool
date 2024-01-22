@@ -1,4 +1,4 @@
-unsigned char currentMenu = 0;
+unsigned char currentMenu = EEPROM.get(28);
 unsigned char lap = 0;
 unsigned long lastLap, startLap=0;
 unsigned long bestLap=-1;

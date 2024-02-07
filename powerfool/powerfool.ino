@@ -1,7 +1,7 @@
 #define BUILD_DISPLAY
 #define BUILD_BLUETOOTH
 //#define is_ESP32
-//#define is_TEST true //Used to test hardware
+#define is_TEST true //Used to test hardware
 
 #include <EEPROM.h>
 #include "menu.h" 
@@ -41,10 +41,20 @@ SoftwareSerial BTSerial (8,9);
 // set up pulse pins
 #define n_saidas_pulso 3
 float out_freq[n_saidas_pulso] = {1,1,1};
-unsigned long previousTime[n_saidas_pulso] = {0,0,0};
+
 //Define pinos para pulsar, devem ser iniciador em setup
 int pulse_pin[n_saidas_pulso] = {-1,-1,-1}; 
+
+//Define correção para cada saide de pulso
 int correction_drift[n_saidas_pulso] = {0,0,0}; 
+
+// Contadores para cada pino, incrementados pela ISR
+volatile unsigned long pulseCounters[n_saidas_pulso] = {0, 0, 0};
+
+// Armazena o número total de interrupções necessárias para cada estado (HIGH e LOW)
+unsigned long totalInterruptsForCycle[n_saidas_pulso];
+
+
 
 bool diagnostic_mode = false;
 
@@ -115,11 +125,14 @@ void setup()
   }
 #else
   void setupTimer1(){
-    TCCR1A = 0;                        //confira timer para operação normal pinos OC1A e OC1B desconectados
-    TCCR1B = 0;                        //limpa registrador
-    TCCR1B |= (1<<CS10)|(1 << CS12);   // configura prescaler para 1024: CS12 = 1 e CS10 = 1
-    TCNT1 = 65536-(16000000/1024/timer_freq); //configura timer
-    TIMSK1 |= (1 << TOIE1);           // habilita a interrupção do TIMER1
+  noInterrupts(); // Desativa interrupções durante a configuração
+  // Configuração do Timer1
+  TCCR1A = 0;
+  TCCR1B = 0;
+  OCR1A = (F_CPU / 5000 / 1024) - 1; // Define a frequência das interrupções do Timer1
+  TCCR1B |= (1 << WGM12) | (1 << CS12) | (1 << CS10); // Modo CTC, prescaler de 1024
+  TIMSK1 |= (1 << OCIE1A); // Habilita interrupção do Timer1 (TIMER1_COMPA_vect)
+  interrupts(); // Reativa interrupções
   }
 #endif
 
@@ -274,9 +287,8 @@ void IRAM_ATTR onTimer(){
  timerLoop(); 
 }
 #else
-ISR(TIMER1_OVF_vect)
-{
-  timerLoop();
-  TCNT1 = 65536-(16000000/1024/timer_freq); // timer reset
+
+ISR(TIMER1_COMPA_vect) {
+   timerLoop();
 }
 #endif

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RealDash CAN XML description file, version 2 Requires RealDash version 1.5.8 or newer -->
+<RealDashCAN version="2">
+  <!-- baseId [optional] is added to each frame canId. -->
+  <!-- frames baseId="3200" -->
+  <!-- RPM, SPEED, BATTERY, OIL PRESSURE, PULSE WIDTH -->
+  <frames>
+    <frame id="3200">
+      <value targetId="37" units="RPM" offset="0" length="2"></value>
+      <value targetId="12" units="V" offset="2" length="2" conversion="V/10"></value>
+      <value targetId="64" units="Kph" offset="4" length="2"></value>
+      <value targetId="151" units="Bar" offset="6" length="2" conversion="V/100"></value>
+      <value targetId="35" units="ms" offset="8" length="2"></value>
+    </frame>
+  </frames>
+</RealDashCAN>
+

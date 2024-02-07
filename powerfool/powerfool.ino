@@ -1,7 +1,6 @@
 #define BUILD_DISPLAY
 #define BUILD_BLUETOOTH
 //#define is_ESP32
-#define is_TEST true //Used to test hardware
 
 #include <EEPROM.h>
 #include "menu.h" 
@@ -59,7 +58,7 @@ unsigned long totalInterruptsForCycle[n_saidas_pulso];
 bool diagnostic_mode = false;
 
 unsigned long last_millis, totalMileage, tripA;
-unsigned int rpmLimit, rpmAlert, minPressure, speedSensor, settings;
+unsigned int rpmLimit, rpmAlert, minPressure, speedSensor, settings, rpm;
 
 unsigned char speedLimit, lastSpeed;
 bool doorLocked = false, speedBeep = false, rpmBeep = false;
@@ -164,7 +163,14 @@ void loop()
 
   readFrequency(speed_in_pin, 4, &speedInput);
   
-  #ifndef is_TEST  
+  if (getBit(2)) //if is test
+  {
+    pinMode(injector_pin,INPUT_PULLUP);
+    pinMode(speed_in_pin,INPUT_PULLUP);
+    setOutFrequency(120.0f,0);
+    setOutFrequency(120.0f,1); 
+  }
+  else{
     if (injectorInput.period == 0.0)
       setOutFrequency(0.0,0);  
     else
@@ -174,16 +180,11 @@ void loop()
       setOutFrequency(0.0,1);  
     else
       setOutFrequency(speedInput.freq,1);
-
-   //Calculate distance and consumed fuel
-   calculateDistante(millis() - last_millis);
-  #else
-    pinMode(injector_pin,INPUT_PULLUP);
-    pinMode(speed_in_pin,INPUT_PULLUP);
-    setOutFrequency(120.0f,0);
-    setOutFrequency(120.0f,1); 
-  #endif
-
+  
+     //Calculate distance and consumed fuel
+     calculateDistante(millis() - last_millis);    
+  }
+  
   //Speed
   unsigned char currentSpeed = (unsigned char) (out_freq[1]/((float) (speedSensor/3600.0f)));    
   speedManager(currentSpeed);
@@ -191,7 +192,9 @@ void loop()
   last_millis = millis();
   
   // Alerts
-  int rpm = injectorInput.freq*60*(((settings & 2 == 0)+1)*2);
+  if (injectorInput.freq != 0)
+    rpm = injectorInput.freq*60*(getBit(1)*2);
+  
   int sensorPressureVal = alertsManager(rpm);
 
   if (diagnostic_mode){

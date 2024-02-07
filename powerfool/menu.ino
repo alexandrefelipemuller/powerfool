@@ -34,11 +34,11 @@ void Menu() {
   Serial.println(F("3 Modo diagnostico"));
   Serial.println(F("4 Sair do menu"));
   Serial.println(F("5 Entradas e saidas"));
-  Serial.println(F("7 Reset de fabrica"));
-  Serial.println(F("9 Reboot"));
-  #ifdef is_TEST  
+  if (getBit(2))
     Serial.println(F("6 Relatorio de teste"));
-  #endif
+  Serial.println(F("7 Reset de fabrica"));
+  Serial.println(F("T Modo Teste"));
+  Serial.println(F("9 Reboot"));
   Serial.print(F("* Version:"));
   Serial.println(SW_VERSION,DEC);
  
@@ -53,9 +53,13 @@ void Menu() {
             case '9': 
                       resetFunc();
                       break;
-            #ifdef is_TEST  
-            case '6': testReport(); break;
-            #endif
+            case 'T':
+            case 't':
+                      settingsChange(2);
+                      break;
+            case '6': if (getBit(2))
+                        testReport();
+                      break;
 
             default: continue;  // includes the case 'no input'
         }
@@ -284,7 +288,7 @@ void diagnosticReport(inputFreq injectorInput, inputFreq speedInput, float consu
     Serial.print(volts);
     Serial.println(F(" v"));
     Serial.print(F("RPM: "));
-    Serial.println((int)(injectorInput.freq * 60 *((settings ^ 2 > 0)+1)*2)); // semi, sequential
+    Serial.println((int)(injectorInput.freq*60*(getBit(1)*2))); // semi, sequential
 
     Serial.println(F("Pressione ESC para sair"));
     if (Serial.read() == 27)
@@ -402,8 +406,7 @@ void subMenu_p(){
         break;
     }
 }
-
-#ifdef is_TEST  
+ 
 void testReport(){
    float volts = analogRead(voltageIn)*0.0197f;
    Serial.print(F("Tensao bateria: "));
@@ -470,7 +473,6 @@ void testReport(){
   else
     Serial.println("OK");
 }
-#endif
 
 void clearScreen(){
     Serial.write(27);

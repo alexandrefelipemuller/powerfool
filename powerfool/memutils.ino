@@ -15,7 +15,7 @@
 * 18 = Settings binary array (2 bytes)
 *     0 - speed beep type
 *     1 - injection sequential/semi
-*     
+*     2 - Test Mode
 *     
 * 20 = fuel tank (2 bytes)
 * 22 = oil pressure waring relay port (1 byte)

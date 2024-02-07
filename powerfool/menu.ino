@@ -1,4 +1,3 @@
-#include <EEPROM.h>
 #ifndef is_ESP32
 #include <avr/pgmspace.h>
 #else
@@ -206,6 +205,18 @@ void settingsChange(unsigned char num){
   settings ^= bitv;
   EEPROM.put(18, (int) settings);
 }
+
+int getBit(int posicao) {
+  // Verifica se a posição fornecida é válida (0 a 31 para um int de 32 bits)
+  if (posicao >= 0 && posicao < sizeof(int) * 8) {
+    int bitv = 1 << posicao; // Cria uma máscara para isolar o bit na posição especificada
+    return (settings & bitv) ? 1 : 0; // Verifica o valor do bit e retorna 1 ou 0
+  } else {
+    // Trate o caso de posição inválida aqui, se necessário
+    return -1; // Ou outro valor de erro
+  }
+}
+
 void numberEntry(int value, int position, bool isPercent){
   Serial.print(F("Novo valor: "));
   if (isPercent){
@@ -317,8 +328,8 @@ void subMenu_a(){
     Serial.println(F("1 Leitura sensor de velocidade"));
     Serial.println(F("2 Saida sinal de velocidade"));
     Serial.println(F("3 Saida sinal de consumo"));
-        Serial.print(F("4 Mudar leitura tipo injeção:"));    
-    if (settings ^ 2 > 0)
+    Serial.print(F("4 Mudar leitura tipo injeção:"));    
+    if (getBit(1))
       Serial.println(F(" (sequencial)")); 
     else
       Serial.println(F(" (semisequencial)")); 

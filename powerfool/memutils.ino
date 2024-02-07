@@ -24,6 +24,7 @@
 * 25 = speed input port (1 byte)
 * 26 = injector input port (1 byte)
 * 27 = break light input port (1 byte)
+* 28 = menu display position
 */
 
 

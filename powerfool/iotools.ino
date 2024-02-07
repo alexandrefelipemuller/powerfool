@@ -4,18 +4,39 @@ void readFrequency(int pin, char samples, inputFreq *returnedValues){
   (*returnedValues).ontime = 0.0; 
   (*returnedValues).period = 0.0;
   (*returnedValues).freq = 0.0;
-  for (int i=0;i < samples; i++){
-    unsigned long ontime = pulseInLong(pin,HIGH,200000);
-    if (ontime == 0){
-      return;
+  
+  unsigned long initialTimeout = 200000; // Initial timeout of 200 ms
+  unsigned long minTimeout = 5000; // Minimum timeout to prevent too low a value
+  unsigned long currentTimeout = initialTimeout;
+  unsigned long lastPulseDuration = 0;
+
+  for (int i = 0; i < samples; i++) {
+    unsigned long ontime = pulseInLong(pin, HIGH, currentTimeout);
+    if (ontime == 0) {
+      // If no pulse detected, break out of the loop to avoid further delay
+      break;
     }
     (*returnedValues).ontime += ontime;
-    (*returnedValues).offtime += pulseInLong(pin,LOW,200000);
+    lastPulseDuration = ontime; // Update last pulse duration
+
+    unsigned long offtime = pulseInLong(pin, LOW, currentTimeout);
+    (*returnedValues).offtime += offtime;
+    if (offtime > 0) {
+      lastPulseDuration = min(lastPulseDuration, offtime); // Use the smaller of ontime and offtime
+    }
+
+    // Decrease timeout for the next iteration based on the last pulse duration,
+    // but ensure it does not fall below a minimum threshold.
+    currentTimeout = max(minTimeout, lastPulseDuration * 2); // Adjust the multiplier as needed
+
+    // Calculate averages for ontime and offtime only if at least one pulse has been detected
+    if (i == samples - 1) {
+      (*returnedValues).ontime /= i + 1;
+      (*returnedValues).offtime /= i + 1;
+      (*returnedValues).period = ((*returnedValues).ontime + (*returnedValues).offtime);
+      (*returnedValues).freq = 1000000.0f / (*returnedValues).period;
+    }
   }
-  (*returnedValues).offtime = (*returnedValues).offtime/samples;
-  (*returnedValues).ontime = (*returnedValues).ontime/samples;
-  (*returnedValues).period = ((*returnedValues).ontime+(*returnedValues).offtime);
-  (*returnedValues).freq = (1000000.0f/(*returnedValues).period);    
 }
 
 //Setup the frequency to output

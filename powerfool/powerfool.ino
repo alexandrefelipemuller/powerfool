@@ -192,8 +192,8 @@ void loop()
   last_millis = millis();
   
   // Alerts
-  if (injectorInput.freq != 0)
-    rpm = injectorInput.freq*60*(getBit(1)*2);
+  if (injectorInput.freq > 0)
+    rpm = injectorInput.freq*60*((getBit(1)+1)*2);
   
   int sensorPressureVal = alertsManager(rpm);
 
